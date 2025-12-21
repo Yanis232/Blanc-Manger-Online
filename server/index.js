@@ -24,9 +24,9 @@ const CardSchema = new mongoose.Schema({
 });
 const Card = mongoose.model('Card', CardSchema);
 
-// "MASTER DECKS"
 let MASTER_BLACK_DECK = [];
 let MASTER_WHITE_DECK = [];
+const JOKER_CARD_TEXT = "🃏 JOKER (Écris ta connerie)"; // La carte magique
 
 mongoose.connect(MONGO_URI)
   .then(async () => {
@@ -53,56 +53,19 @@ const shuffleDeck = (deck) => {
 
 io.on('connection', (socket) => {
   
-  // --- 👮‍♂️ ZONE ADMIN DASHBOARD ---
-
-  // 1. Envoyer toutes les cartes à l'admin
-  socket.on('admin_fetch_cards', async () => {
-    try {
-        const allCards = await Card.find().sort({ createdAt: -1 }); // Les plus récentes en premier
-        socket.emit('admin_receive_cards', allCards);
-    } catch (e) { console.error(e); }
-  });
-
-  // 2. Ajouter une carte depuis le dashboard
-  socket.on('admin_add_card', async ({ text, type }) => {
-    try {
-        const newCard = new Card({ text, type });
-        await newCard.save();
-
-        // Mise à jour immédiate des Masters (pour les futures parties)
-        if (type === 'black') MASTER_BLACK_DECK.push(text);
-        else MASTER_WHITE_DECK.push(text);
-
-        // On renvoie la liste mise à jour à l'admin
-        const allCards = await Card.find().sort({ createdAt: -1 });
-        socket.emit('admin_receive_cards', allCards);
-        socket.emit('admin_action_success', "Carte ajoutée !");
-    } catch (e) { console.error(e); }
-  });
-
-  // 3. Supprimer une carte
-  socket.on('admin_delete_card', async (cardId) => {
-    try {
-        const deletedCard = await Card.findByIdAndDelete(cardId);
-        if (deletedCard) {
-            // On retire aussi du Master Deck en mémoire
-            if (deletedCard.type === 'black') {
-                MASTER_BLACK_DECK = MASTER_BLACK_DECK.filter(t => t !== deletedCard.text);
-            } else {
-                MASTER_WHITE_DECK = MASTER_WHITE_DECK.filter(t => t !== deletedCard.text);
-            }
-            
-            const allCards = await Card.find().sort({ createdAt: -1 });
-            socket.emit('admin_receive_cards', allCards);
-        }
-    } catch (e) { console.error(e); }
-  });
-
-  // --- FIN ZONE ADMIN ---
+  // ADMIN DASHBOARD
+  socket.on('admin_fetch_cards', async () => { try { const allCards = await Card.find().sort({ createdAt: -1 }); socket.emit('admin_receive_cards', allCards); } catch (e) { console.error(e); } });
+  socket.on('admin_add_card', async ({ text, type }) => { try { const newCard = new Card({ text, type }); await newCard.save(); if (type === 'black') MASTER_BLACK_DECK.push(text); else MASTER_WHITE_DECK.push(text); const allCards = await Card.find().sort({ createdAt: -1 }); socket.emit('admin_receive_cards', allCards); socket.emit('admin_action_success', "Carte ajoutée !"); } catch (e) { console.error(e); } });
+  socket.on('admin_delete_card', async (cardId) => { try { const deletedCard = await Card.findByIdAndDelete(cardId); if (deletedCard) { if (deletedCard.type === 'black') MASTER_BLACK_DECK = MASTER_BLACK_DECK.filter(t => t !== deletedCard.text); else MASTER_WHITE_DECK = MASTER_WHITE_DECK.filter(t => t !== deletedCard.text); const allCards = await Card.find().sort({ createdAt: -1 }); socket.emit('admin_receive_cards', allCards); } } catch (e) { console.error(e); } });
 
   socket.on('create_room', (username) => {
     const roomId = Math.random().toString(36).substring(2, 7).toUpperCase();
-    const roomWhiteDeck = shuffleDeck(MASTER_WHITE_DECK);
+    
+    // 🔥 AJOUT DES JOKERS DANS LE DECK DE LA SALLE
+    // On ajoute 5 Jokers dans le paquet blanc avant de mélanger
+    const deckWithJokers = [...MASTER_WHITE_DECK, JOKER_CARD_TEXT, JOKER_CARD_TEXT, JOKER_CARD_TEXT, JOKER_CARD_TEXT, JOKER_CARD_TEXT];
+    
+    const roomWhiteDeck = shuffleDeck(deckWithJokers);
     const roomBlackDeck = shuffleDeck(MASTER_BLACK_DECK);
 
     rooms[roomId] = {
@@ -131,11 +94,7 @@ io.on('connection', (socket) => {
 
     io.to(roomId).emit("update_players", rooms[roomId].players);
     if (rooms[roomId].gameState !== 'LOBBY') {
-        socket.emit("game_started", {
-            blackCard: rooms[roomId].currentBlackCard,
-            judgeId: rooms[roomId].judgeId,
-            players: rooms[roomId].players
-        });
+        socket.emit("game_started", { blackCard: rooms[roomId].currentBlackCard, judgeId: rooms[roomId].judgeId, players: rooms[roomId].players });
         socket.emit("start_voting", rooms[roomId].playedCards);
     }
   });
@@ -146,13 +105,25 @@ io.on('connection', (socket) => {
     startNewRound(roomId, room, room.players[0].id); 
   });
 
-  socket.on('play_card', ({ roomId, cardText }) => {
+  // 🔥 LOGIQUE JEU MODIFIÉE POUR LE JOKER
+  socket.on('play_card', ({ roomId, cardText, originalText }) => {
     const room = rooms[roomId];
     if (!room) return;
 
+    // 1. Sur la table, on met le texte (personnalisé ou normal)
     room.playedCards.push({ playerId: socket.id, text: cardText });
+    
+    // 2. Dans la main, on retire la carte originale (soit le Joker, soit la carte normale)
+    const textToRemove = originalText || cardText;
+
     const player = room.players.find(p => p.id === socket.id);
-    if (player) player.hand = player.hand.filter(c => c !== cardText);
+    if (player) {
+        // On utilise splice pour retirer une seule instance (au cas où il a 2 Jokers)
+        const cardIndex = player.hand.indexOf(textToRemove);
+        if (cardIndex > -1) {
+            player.hand.splice(cardIndex, 1);
+        }
+    }
 
     if (room.playedCards.length === room.players.length - 1) {
       room.gameState = 'JUDGING';
@@ -163,7 +134,9 @@ io.on('connection', (socket) => {
   socket.on('reset_game', (roomId) => {
     const room = rooms[roomId];
     if (!room) return;
-    room.whiteDeck = shuffleDeck(MASTER_WHITE_DECK);
+    // On remet les jokers au reset
+    const deckWithJokers = [...MASTER_WHITE_DECK, JOKER_CARD_TEXT, JOKER_CARD_TEXT, JOKER_CARD_TEXT, JOKER_CARD_TEXT, JOKER_CARD_TEXT];
+    room.whiteDeck = shuffleDeck(deckWithJokers);
     room.blackDeck = shuffleDeck(MASTER_BLACK_DECK);
     room.gameState = 'LOBBY';
     room.currentBlackCard = null;
@@ -189,10 +162,7 @@ io.on('connection', (socket) => {
     if (winnerId) {
       const winner = room.players.find(p => p.id === winnerId);
       if (winner) winner.score += 1;
-      io.to(roomId).emit('round_winner', {
-        winnerName: winner ? winner.username : "Inconnu",
-        winningCard: winningCardText
-      });
+      io.to(roomId).emit('round_winner', { winnerName: winner ? winner.username : "Inconnu", winningCard: winningCardText });
       setTimeout(() => { startNewRound(roomId, room, winnerId); }, 4000); 
     }
   });
@@ -204,23 +174,18 @@ io.on('connection', (socket) => {
     room.currentBlackCard = room.blackDeck.pop();
     room.judgeId = newJudgeId;
     room.players.forEach(player => {
-      const cardsNeeded = 7 - player.hand.length;
+      // 🔥 ICI : ON PASSE À 10 CARTES
+      const cardsNeeded = 10 - player.hand.length;
       if (cardsNeeded > 0) {
-          if (room.whiteDeck.length < cardsNeeded) room.whiteDeck = shuffleDeck(MASTER_WHITE_DECK);
+          if (room.whiteDeck.length < cardsNeeded) room.whiteDeck = shuffleDeck([...MASTER_WHITE_DECK, JOKER_CARD_TEXT, JOKER_CARD_TEXT, JOKER_CARD_TEXT]);
           const drawnCards = room.whiteDeck.splice(0, cardsNeeded);
           player.hand.push(...drawnCards);
       }
     });
-    io.to(roomId).emit('game_started', {
-      blackCard: room.currentBlackCard,
-      judgeId: room.judgeId,
-      players: room.players 
-    });
+    io.to(roomId).emit('game_started', { blackCard: room.currentBlackCard, judgeId: room.judgeId, players: room.players });
     io.to(roomId).emit('update_players', room.players);
   };
 });
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
-  console.log(`🚀 SERVEUR LANCÉ SUR LE PORT ${PORT}`);
-});
+server.listen(PORT, () => { console.log(`🚀 SERVEUR LANCÉ SUR LE PORT ${PORT}`); });
