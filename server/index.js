@@ -6,7 +6,6 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 
 // SÉCURITÉ : On récupère le lien depuis l'environnement (Render ou .env)
-// Si la variable n'existe pas, on met une chaine vide (ça plantera proprement au lieu de fuiter)
 const MONGO_URI = process.env.MONGO_URI;
 
 const app = express();
@@ -168,8 +167,6 @@ io.on('connection', (socket) => {
     const room = rooms[roomId];
     if (!room) return;
 
-    // Sécurité : Seul l'hôte peut reset (optionnel, ici on fait confiance au bouton masqué)
-    
     // 1. On remet tout à zéro
     room.gameState = 'LOBBY';
     room.currentBlackCard = null;

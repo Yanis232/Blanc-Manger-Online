@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import io from 'socket.io-client';
-import confetti from 'canvas-confetti'; // <--- IMPORT CONFETTIS
+import confetti from 'canvas-confetti';
 
 // En ligne (Vercel), on utilise la variable d'environnement. En local, on garde localhost.
 const BACKEND_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
@@ -53,8 +53,6 @@ function App() {
       setIsInRoom(false);  // Annule l'entrée dans la salle (retour à l'accueil)
     });
 
-    // N'oublie pas d'ajouter  dans le return du useEffect !
-
     socket.on("game_started", (data) => {
       setGameStarted(true);
       setGameState('PLAYING');
@@ -81,10 +79,8 @@ function App() {
 
     socket.on("you_are_kicked", () => {
       alert("Tu as été exclu de la partie par l'hôte ! 😢");
-      window.location.reload(); // On recharge la page pour revenir à l'accueil proprement
+      window.location.reload(); 
     });
-    
-    // Ajoute aussi  dans le return du useEffect !
 
     socket.on("return_to_lobby", (updatedPlayers) => {
       setGameState('LOBBY');
@@ -103,17 +99,16 @@ function App() {
     return () => {
       socket.off("room_created");
       socket.off("update_players");
-      socket.off("error_join")
+      socket.off("error_join");
       socket.off("game_started");
       socket.off("start_voting");
       socket.off("round_winner");
       socket.off("return_to_lobby");
-      socket.off("you_are_kicked")
+      socket.off("you_are_kicked");
     };
   }, []);
 
-
-// --- EFFET VISUEL : CONFETTIS ---
+  // --- EFFET VISUEL : CONFETTIS ---
   useEffect(() => {
     if (winnerInfo) {
       confetti({
@@ -132,12 +127,15 @@ function App() {
 
   // --- ACTIONS DU JEU ---
   const createRoom = () => { if (username.trim()) socket.emit("create_room", username); };
+  
   const joinRoom = () => { 
     if (username.trim() && roomCode.trim()) { 
       socket.emit("join_room", { roomId: roomCode, username }); 
+      // On met à true, mais si le serveur renvoie "error_join", l'écouteur le remettra à false.
       setIsInRoom(true); 
     }
   };
+
   const kickPlayer = (playerId, playerName) => {
     if (confirm(`Veux-tu vraiment exclure ${playerName} ?`)) {
       socket.emit('kick_player', { roomId: roomCode, playerId });
