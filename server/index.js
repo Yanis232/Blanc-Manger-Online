@@ -32,11 +32,24 @@ const JOKER_CARD_TEXT = "🃏 JOKER (Écris ta connerie)";
 mongoose.connect(MONGO_URI)
   .then(async () => {
     console.log('✅ Connecté à MongoDB Atlas');
+    
+    // 🔥 NETTOYAGE DES DONNÉES AU CHARGEMENT
     const blackCardsDB = await Card.find({ type: 'black' });
     const whiteCardsDB = await Card.find({ type: 'white' });
-    MASTER_BLACK_DECK = blackCardsDB.map(c => ({ text: c.text, pick: c.pick || 1 }));
+
+    // On transforme les documents Mongoose en objets simples et propres
+    MASTER_BLACK_DECK = blackCardsDB.map(c => ({ 
+        text: c.text, 
+        pick: c.pick || 1 // Sécurité : si pick n'existe pas, on met 1
+    }));
+    
     MASTER_WHITE_DECK = whiteCardsDB.map(c => c.text);
+
     console.log(`🃏 CHARGEMENT MASTER : ${MASTER_BLACK_DECK.length} Questions / ${MASTER_WHITE_DECK.length} Réponses`);
+    
+    // Petit check pour toi dans la console
+    const pick2Cards = MASTER_BLACK_DECK.filter(c => c.pick > 1);
+    console.log(`👀 DONT ${pick2Cards.length} CARTES "PICK 2" DÉTECTÉES !`);
   })
   .catch(err => console.error("❌ Erreur MongoDB:", err));
 
@@ -52,6 +65,7 @@ const shuffleDeck = (deck) => {
     return newDeck;
 };
 
+// Helper pour compter les trous (utile pour l'admin)
 const countHoles = (text) => { return (text.match(/____/g) || []).length || 1; };
 
 io.on('connection', (socket) => {
@@ -89,43 +103,11 @@ io.on('connection', (socket) => {
       if (room && room.players[0].id === socket.id) { room.settings = settings; io.to(roomId).emit('settings_updated', room.settings); }
   });
 
-  // 🔥 C'EST ICI QUE LA MAGIE DE LA RECONNEXION OPÈRE 🔥
   socket.on("join_room", (data) => {
     const { roomId, username } = data;
     if (!rooms[roomId]) { socket.emit("error_join", "Salle inexistante !"); return; }
-    
-    // On cherche si le joueur existe déjà
-    const existingPlayer = rooms[roomId].players.find(p => p.username === username);
+    if (rooms[roomId].players.some(p => p.username === username)) { socket.emit("error_join", "Pseudo déjà pris !"); return; }
 
-    if (existingPlayer) {
-        // --- CAS RECONNEXION ---
-        console.log(`♻️ RECONNEXION de ${username} dans la salle ${roomId}`);
-        
-        // 1. On met à jour son socket ID (car c'est une nouvelle connexion technique)
-        existingPlayer.id = socket.id;
-        socket.join(roomId);
-
-        // 2. On prévient tout le monde (pour mettre à jour l'icone hote par exemple)
-        io.to(roomId).emit("update_players", rooms[roomId].players);
-        socket.emit('settings_updated', rooms[roomId].settings);
-
-        // 3. S'il revient en plein milieu d'une partie, on lui renvoie TOUT
-        if (rooms[roomId].gameState !== 'LOBBY') {
-            socket.emit("game_started", { 
-                blackCard: rooms[roomId].currentBlackCard, 
-                judgeId: rooms[roomId].judgeId, 
-                players: rooms[roomId].players // Sa main est dedans, il la retrouvera !
-            });
-            
-            // Si on était en phase de vote, on lui renvoie aussi les cartes sur la table
-            if (rooms[roomId].gameState === 'JUDGING') {
-                socket.emit("start_voting", rooms[roomId].playedCards);
-            }
-        }
-        return; // On arrête là, pas besoin de créer un nouveau joueur
-    }
-
-    // --- CAS NOUVEAU JOUEUR ---
     const newPlayer = { id: socket.id, username, score: 0, hand: [], isHost: false };
     rooms[roomId].players.push(newPlayer);
     socket.join(roomId);
@@ -135,9 +117,7 @@ io.on('connection', (socket) => {
 
     if (rooms[roomId].gameState !== 'LOBBY') {
         socket.emit("game_started", { blackCard: rooms[roomId].currentBlackCard, judgeId: rooms[roomId].judgeId, players: rooms[roomId].players });
-        if (rooms[roomId].gameState === 'JUDGING') {
-            socket.emit("start_voting", rooms[roomId].playedCards);
-        }
+        socket.emit("start_voting", rooms[roomId].playedCards);
     }
   });
 
@@ -147,9 +127,17 @@ io.on('connection', (socket) => {
     startNewRound(roomId, room, room.players[0].id); 
   });
   
+  // 🔥 NOUVEL ÉVÉNEMENT : DÉCLENCHEUR MANUEL POUR LA MANCHE SUIVANTE
   socket.on('trigger_next_round', (roomId) => {
       const room = rooms[roomId];
       if (!room) return;
+      // On retrouve le dernier gagnant pour qu'il devienne juge (ou on garde le juge actuel, selon ta logique)
+      // Ici, on va simplement prendre le joueur SUIVANT dans la liste pour être juge, ou garder le gagnant comme juge.
+      // Dans ton code précédent, tu passais `winnerId` à startNewRound.
+      // Il faut qu'on stocke le prochain juge quelque part ou qu'on le recalcule.
+      
+      // Simplification : Le gagnant devient juge (logique classique BMC)
+      // On va stocker l'ID du prochain juge dans l'état de la room quand on détermine le gagnant
       const nextJudgeId = room.nextJudgeId || room.players[0].id;
       startNewRound(roomId, room, nextJudgeId);
   });
@@ -158,6 +146,7 @@ io.on('connection', (socket) => {
     const room = rooms[roomId];
     if (!room) return;
 
+    // cardTexts est toujours un tableau
     room.playedCards.push({ playerId: socket.id, texts: cardTexts });
     
     const player = room.players.find(p => p.id === socket.id);
@@ -241,11 +230,16 @@ io.on('connection', (socket) => {
       if (winner && winner.score >= room.settings.scoreLimit) {
           io.to(roomId).emit('game_over', { winnerName: winner.username, score: winner.score });
       } else {
+          // On sauvegarde qui sera le prochain juge (le gagnant) pour l'utiliser quand l'hôte cliquera
           room.nextJudgeId = winnerId;
+          
           io.to(roomId).emit('round_winner', { 
               winnerName: winner ? winner.username : "Inconnu", 
               winningCards: winnerEntry.texts 
           });
+          
+          // ❌ SUPPRESSION DU SETTIMEOUT AUTOMATIQUE ICI
+          // Le serveur attend maintenant l'événement 'trigger_next_round'
       }
     }
   });
