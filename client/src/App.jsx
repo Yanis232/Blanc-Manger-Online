@@ -26,8 +26,8 @@ const speak = (text) => {
     if (googleVoice) utterance.voice = googleVoice;
 
     // 🔥 RÉGLAGES DRÔLES ICI 🔥
-    utterance.pitch = 1.8; // 0 = Grave, 1 = Normal, 2 = Hélium (Max)
-    utterance.rate = 1.1;  // Un peu plus rapide pour le dynamisme
+    utterance.pitch = 1.4; // 0 = Grave, 1 = Normal, 2 = Hélium (Max)
+    utterance.rate = 1.2;  // Un peu plus rapide pour le dynamisme
 
     window.speechSynthesis.speak(utterance);
 };
