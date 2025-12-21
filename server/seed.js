@@ -1,62 +1,106 @@
-// 1. On charge la librairie qui lit le fichier .env
-require('dotenv').config(); 
-
+require('dotenv').config();
 const mongoose = require('mongoose');
 
-// 2. On récupère le lien sécurisé (plus de mot de passe en dur ici !)
-const MONGO_URI = process.env.MONGO_URI;
+// --- CONFIGURATION ---
+const MONGO_URI = process.env.MONGO_URI || "mets_ton_lien_mongodb_ici_si_ca_marche_pas";
 
-// Définition simple des cartes
 const CardSchema = new mongoose.Schema({
   text: String,
-  type: { type: String, enum: ['black', 'white'] }, // 'black' pour question, 'white' pour réponse
-  pack: { type: String, default: 'Base' }
+  type: { type: String, enum: ['black', 'white'] },
+  createdAt: { type: Date, default: Date.now }
 });
-
 const Card = mongoose.model('Card', CardSchema);
 
-const BLACK_DECK = [
-  "Pour mon repas de mariage, j'ai prévu ____.",
-  "Chérie, j'ai rétréci ____ !",
-  "Le nouveau parfum de Dior : Essence de ____.",
-  "C'est quoi cette odeur ? C'est ____.",
-  "En 2025, la fin du monde sera causée par ____.",
-  "Mon super-pouvoir inutile, c'est ____.",
-  "La seule chose qui m'excite plus que l'argent, c'est ____."
+// --- LES CARTES À AJOUTER ---
+const blackCards = [
+    "La seule chose qui m'excite plus que l'argent, c'est _____.",
+    "Pour mon repas de mariage, j'ai prévu _____.",
+    "Ce soir, c'est raclette et _____.",
+    "Mon super-pouvoir inutile, c'est _____.",
+    "Dans ma valise, j'ai oublié _____.",
+    "Le secret d'une vie heureuse, c'est _____.",
+    "_____ : C'est doux, c'est neuf, ça lave.",
+    "Pourquoi j'ai mal aux fesses ?",
+    "Qu'est-ce que je cache sous mon lit ?",
+    "Le nouveau parfum de Dior : Essence de _____.",
+    "Chérie, je suis enceinte. Le père est _____.",
+    "Le pire cadeau de Noël : _____.",
+    "En guerre, tous les moyens sont bons, même _____.",
+    "Le président a déclaré la guerre à _____.",
+    "Qu'est-ce qui a ruiné la fête d'anniversaire ?",
+    "Avant de mourir, je veux essayer _____."
 ];
 
-const WHITE_DECK = [
-  "Une grand-mère en bikini", "Un poney sous stéroïdes", "La calvitie de mon oncle",
-  "Un tacos 3 viandes", "Emmanuel Macron", "Mes choix de vie douteux",
-  "Un enfant qui pleure", "Une chaussette sale", "L'historique internet de ton père",
-  "Un vegan agressif", "Une explosion nucléaire", "Le patriarcat",
-  "300g de jambon", "Un date Tinder gênant", "Ma dignité",
-  "Un massage des pieds", "Une attaque de zombies", "Le coronavirus",
-  "Une MST surprise", "Du gluten", "Un slip kangourou", "Un influenceur Dubaï",
-  "La chatte à la voisine", "Une dictature bienveillante"
+const whiteCards = [
+    "Un influenceur à Dubaï",
+    "300g de jambon",
+    "La calvitie de mon oncle",
+    "Un poney sous stéroïdes",
+    "L'album de Francky Vincent",
+    "Ma dignité",
+    "Le petit grégory",
+    "Un vegan agressif",
+    "Une explosion nucléaire",
+    "L'historique internet de ton père",
+    "Un tacos 3 viandes",
+    "Hitler",
+    "Des chaussettes dans des sandales",
+    "Une MST surprise",
+    "L'odeur du métro parisien",
+    "Ma belle-mère",
+    "Un suppositoire géant",
+    "Le cadavre de mon ex",
+    "Une érection incontrôlable",
+    "Une grand-mère en bikini",
+    "Un enfant qui pleure dans l'avion",
+    "Manger ses crottes de nez",
+    "Se faire larguer par SMS",
+    "Un prêtre un peu trop tactile",
+    "Une sodomie accidentelle",
+    "Vendre son rein pour un iPhone",
+    "Nicolas Sarkozy sur un tabouret",
+    "Un pet foireux",
+    "La diarrhée du lendemain de cuite",
+    "Un sextoy d'occasion",
+    "Une gifle de Will Smith",
+    "Coucher avec le prof de maths",
+    "Une pizza ananas",
+    "Faire pipi sous la douche",
+    "Un nain de jardin maléfique",
+    "Les pieds de Yannick Noah",
+    "Un massage thaïlandais avec finition",
+    "Une partouze chez les Schtroumpfs",
+    "Le périnée de ma tante",
+    "Un chaton mignon mais mort",
+    "Se réveiller à côté d'un inconnu",
+    "L'haleine du matin",
+    "Un contrôleur des impôts",
+    "Une vidéo de chatons",
+    "Le silence gênant dans l'ascenseur"
 ];
 
-const seedDB = async () => {
-  try {
-    await mongoose.connect(MONGO_URI);
-    console.log('✅ Connecté à MongoDB');
-
-    // On vide la base pour éviter les doublons si on relance le script
+// --- LOGIQUE D'INJECTION ---
+mongoose.connect(MONGO_URI)
+  .then(async () => {
+    console.log('✅ Connecté à MongoDB. Nettoyage en cours...');
+    
+    // 1. On supprime tout pour éviter les doublons dans la BDD
     await Card.deleteMany({});
-    console.log('🗑️ Anciennes cartes supprimées');
+    console.log('🗑️ Base de données vidée.');
 
-    // On prépare les nouvelles cartes
-    const blackCards = BLACK_DECK.map(text => ({ text, type: 'black' }));
-    const whiteCards = WHITE_DECK.map(text => ({ text, type: 'white' }));
+    // 2. On prépare les objets
+    const cardsToInsert = [
+        ...blackCards.map(text => ({ text, type: 'black' })),
+        ...whiteCards.map(text => ({ text, type: 'white' }))
+    ];
 
-    // On insère tout
-    await Card.insertMany([...blackCards, ...whiteCards]);
-    console.log(`🎉 Ajouté : ${blackCards.length} cartes noires et ${whiteCards.length} cartes blanches.`);
-
-    mongoose.connection.close();
-  } catch (err) {
+    // 3. On insère tout
+    await Card.insertMany(cardsToInsert);
+    console.log(`✨ SUCCÈS : ${cardsToInsert.length} cartes ajoutées !`);
+    
+    process.exit();
+  })
+  .catch(err => {
     console.error(err);
-  }
-};
-
-seedDB();
+    process.exit(1);
+  });
