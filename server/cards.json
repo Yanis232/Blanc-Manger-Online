@@ -73,5 +73,15 @@
   { "text": "Une fistinière", "type": "white" },
   { "text": "Le clitoris de la Reine d'Angleterre", "type": "white" },
   { "text": "Manger ses propres enfants", "type": "white" },
-  { "text": "Un gode ceinture", "type": "white" }
+  { "text": "Un gode ceinture", "type": "white" },
+  { "text": "Pour mon rencard, j'ai apporté ____ et ____.", "type": "black", "pick": 2 },
+  { "text": "____ + ____ = La soirée parfaite.", "type": "black", "pick": 2 },
+  { "text": "Avec ____ et ____, on ne s'ennuie jamais.", "type": "black", "pick": 2 },
+  { "text": "Étape 1 : ____. Étape 2 : ____. Étape 3 : Bénéfice.", "type": "black", "pick": 2 },
+  { "text": "Je n'ai jamais compris le lien entre ____ et ____.", "type": "black", "pick": 2 },
+  { "text": "Le nouveau film de Disney : La Belle et ____ avec un peu de ____.", "type": "black", "pick": 2 },
+  { "text": "C'est comme ____, mais avec ____ en plus.", "type": "black", "pick": 2 },
+  { "text": "Qu'est-ce qui a ruiné la lune de miel ? ____ et ____.", "type": "black", "pick": 2 },
+  { "text": "Dans un monde parfait, il y aurait plus de ____ et moins de ____.", "type": "black", "pick": 2 },
+  { "text": "Si je pouvais combiner ____ avec ____, je serais riche.", "type": "black", "pick": 2 }
 ]
