@@ -1,7 +1,10 @@
+// 1. On charge la librairie qui lit le fichier .env
+require('dotenv').config(); 
+
 const mongoose = require('mongoose');
 
-// ⚠️ REMPLACE CECI PAR TON LIEN MONGODB (n'oublie pas le mot de passe dedans)
-const MONGO_URI = "mongodb+srv://yanis_db_user:H0Wp983wZ3kzQR8j@projetyanis.sbwzufn.mongodb.net/?appName=ProjetYanis";
+// 2. On récupère le lien sécurisé (plus de mot de passe en dur ici !)
+const MONGO_URI = process.env.MONGO_URI;
 
 // Définition simple des cartes
 const CardSchema = new mongoose.Schema({

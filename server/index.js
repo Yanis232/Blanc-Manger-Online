@@ -1,11 +1,13 @@
+require('dotenv').config(); // Charge le fichier .env si on est en local
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const mongoose = require('mongoose');
 
-// ⚠️ COLLE TON LIEN MONGODB EXACT ICI (entre les guillemets)
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://yanis_db_user:H0Wp983wZ3kzQR8j@projetyanis.sbwzufn.mongodb.net/?appName=ProjetYanis";
+// SÉCURITÉ : On récupère le lien depuis l'environnement (Render ou .env)
+// Si la variable n'existe pas, on met une chaine vide (ça plantera proprement au lieu de fuiter)
+const MONGO_URI = process.env.MONGO_URI;
 
 const app = express();
 app.use(cors());
