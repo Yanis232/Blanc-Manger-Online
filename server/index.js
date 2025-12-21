@@ -126,6 +126,21 @@ io.on('connection', (socket) => {
     if (!room) return;
     startNewRound(roomId, room, room.players[0].id); 
   });
+  
+  // 🔥 NOUVEL ÉVÉNEMENT : DÉCLENCHEUR MANUEL POUR LA MANCHE SUIVANTE
+  socket.on('trigger_next_round', (roomId) => {
+      const room = rooms[roomId];
+      if (!room) return;
+      // On retrouve le dernier gagnant pour qu'il devienne juge (ou on garde le juge actuel, selon ta logique)
+      // Ici, on va simplement prendre le joueur SUIVANT dans la liste pour être juge, ou garder le gagnant comme juge.
+      // Dans ton code précédent, tu passais `winnerId` à startNewRound.
+      // Il faut qu'on stocke le prochain juge quelque part ou qu'on le recalcule.
+      
+      // Simplification : Le gagnant devient juge (logique classique BMC)
+      // On va stocker l'ID du prochain juge dans l'état de la room quand on détermine le gagnant
+      const nextJudgeId = room.nextJudgeId || room.players[0].id;
+      startNewRound(roomId, room, nextJudgeId);
+  });
 
   socket.on('play_card', ({ roomId, cardTexts, originalTexts }) => {
     const room = rooms[roomId];
@@ -207,14 +222,24 @@ io.on('connection', (socket) => {
     if (!room) return;
     const winnerEntry = room.playedCards.find(c => c.texts[0] === winningCardFirstText);
     const winnerId = winnerEntry ? winnerEntry.playerId : null;
+    
     if (winnerId) {
       const winner = room.players.find(p => p.id === winnerId);
       if (winner) winner.score += 1;
+      
       if (winner && winner.score >= room.settings.scoreLimit) {
           io.to(roomId).emit('game_over', { winnerName: winner.username, score: winner.score });
       } else {
-          io.to(roomId).emit('round_winner', { winnerName: winner ? winner.username : "Inconnu", winningCards: winnerEntry.texts });
-          setTimeout(() => { startNewRound(roomId, room, winnerId); }, 4000); 
+          // On sauvegarde qui sera le prochain juge (le gagnant) pour l'utiliser quand l'hôte cliquera
+          room.nextJudgeId = winnerId;
+          
+          io.to(roomId).emit('round_winner', { 
+              winnerName: winner ? winner.username : "Inconnu", 
+              winningCards: winnerEntry.texts 
+          });
+          
+          // ❌ SUPPRESSION DU SETTIMEOUT AUTOMATIQUE ICI
+          // Le serveur attend maintenant l'événement 'trigger_next_round'
       }
     }
   });
