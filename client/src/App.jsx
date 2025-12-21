@@ -270,16 +270,22 @@ function App() {
             ) : (
                 <>
                     <h3 className="text-gray-400 mb-2 ml-4 animate-bounce">À toi de jouer :</h3>
-                    <div className="flex overflow-x-auto gap-4 px-4 pb-4 pt-32 items-end w-full scrollbar-hide">
-                        {myHand.map((card, index) => (
-                        <div key={index} onClick={() => playCard(card)}
-                            // AJOUT CLASSE ANIMATION + DELAY
-                            className="animate-card-pop flex-shrink-0 bg-white text-gray-900 p-4 rounded-lg w-48 h-64 shadow-lg cursor-pointer transition transform hover:-translate-y-6 hover:rotate-1 border-2 border-transparent hover:border-purple-500"
-                            style={{ animationDelay: `${index * 0.1}s` }}
-                        >
-                            <p className="font-bold text-lg select-none">{card}</p>
+                    
+                    {/* 👇 CORRECTION SCROLL ET TOUCH 👇 */}
+                    <div className="w-full relative z-10">
+                        <div className="flex overflow-x-auto gap-4 px-4 pb-6 pt-32 items-end w-full touch-pan-x snap-x">
+                            {myHand.map((card, index) => (
+                            <div key={index} onClick={() => playCard(card)}
+                                // Ajout de 'snap-center' pour le mobile et ajustement du hover
+                                className="snap-center animate-card-pop flex-shrink-0 bg-white text-gray-900 p-4 rounded-lg w-48 h-64 shadow-lg cursor-pointer transition transform hover:-translate-y-12 hover:rotate-1 border-2 border-transparent hover:border-purple-500"
+                                style={{ animationDelay: `${index * 0.1}s` }}
+                            >
+                                <p className="font-bold text-lg select-none">{card}</p>
+                            </div>
+                            ))}
+                            {/* Petit espace à la fin pour ne pas coller la dernière carte au bord */}
+                            <div className="w-4 flex-shrink-0"></div>
                         </div>
-                        ))}
                     </div>
                 </>
             )}

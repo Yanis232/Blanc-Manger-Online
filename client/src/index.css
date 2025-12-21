@@ -8,3 +8,22 @@ body {
   margin: 0;
   font-family: 'Inter', sans-serif; /* Police propre par défaut */
 }
+
+/* Barre de scroll personnalisée */
+::-webkit-scrollbar {
+  height: 8px; /* Hauteur de la barre horizontale */
+}
+
+::-webkit-scrollbar-track {
+  background: #1f2937; /* Couleur du fond (gris foncé) */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4b5563; /* Couleur de la barre (gris clair) */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280; /* Couleur au survol */
+}
