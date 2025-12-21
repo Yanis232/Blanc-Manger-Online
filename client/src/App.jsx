@@ -236,7 +236,7 @@ function App() {
             ) : (
                 <>
                     <h3 className="text-gray-400 mb-2 ml-4 animate-bounce">À toi de jouer :</h3>
-                    <div className="flex overflow-x-auto gap-4 px-4 pb-4 pt-12 items-end h-80 w-full scrollbar-hide">
+                    <div className="flex overflow-x-visible gap-4 px-4 pb-8 pt-20 items-end w-full min-h-[350px] scrollbar-hide">
                         {myHand.map((card, index) => (
                         <div key={index} onClick={() => playCard(card)}
                             // AJOUT CLASSE ANIMATION + DELAY
