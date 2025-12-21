@@ -47,6 +47,14 @@ function App() {
       if (me) setLocalIsHost(me.isHost);
     });
 
+    // Si le serveur refuse l'entrée (pseudo pris ou salle inexistante)
+    socket.on("error_join", (message) => {
+      alert(message);      // Affiche l'alerte
+      setIsInRoom(false);  // Annule l'entrée dans la salle (retour à l'accueil)
+    });
+
+    // N'oublie pas d'ajouter  dans le return du useEffect !
+
     socket.on("game_started", (data) => {
       setGameStarted(true);
       setGameState('PLAYING');
@@ -95,6 +103,7 @@ function App() {
     return () => {
       socket.off("room_created");
       socket.off("update_players");
+      socket.off("error_join")
       socket.off("game_started");
       socket.off("start_voting");
       socket.off("round_winner");
@@ -123,8 +132,12 @@ function App() {
 
   // --- ACTIONS DU JEU ---
   const createRoom = () => { if (username.trim()) socket.emit("create_room", username); };
-  const joinRoom = () => { if (username.trim() && roomCode.trim()) { socket.emit("join_room", { roomId: roomCode, username }); setIsInRoom(true); }};
-  const startGame = () => { socket.emit("start_game", roomCode); };
+  const joinRoom = () => { 
+    if (username.trim() && roomCode.trim()) { 
+      socket.emit("join_room", { roomId: roomCode, username }); 
+      setIsInRoom(true); 
+    }
+  };
   const kickPlayer = (playerId, playerName) => {
     if (confirm(`Veux-tu vraiment exclure ${playerName} ?`)) {
       socket.emit('kick_player', { roomId: roomCode, playerId });

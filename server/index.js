@@ -99,11 +99,45 @@ io.on('connection', (socket) => {
     io.to(roomId).emit('update_players', rooms[roomId].players);
   });
 
-  socket.on('join_room', ({ roomId, username }) => {
-    if (rooms[roomId]) {
-      rooms[roomId].players.push({ id: socket.id, username, score: 0, isHost: false, hand: [] });
-      socket.join(roomId);
-      io.to(roomId).emit('update_players', rooms[roomId].players);
+  socket.on("join_room", (data) => {
+    const { roomId, username } = data;
+    
+    // Vérifie si la salle existe
+    if (!rooms[roomId]) {
+      socket.emit("error_join", "Cette salle n'existe pas !");
+      return;
+    }
+
+    // 🔥 LE VIDEUR : Vérifie si le pseudo est déjà pris
+    const isPseudoTaken = rooms[roomId].players.some(p => p.username === username);
+    if (isPseudoTaken) {
+      socket.emit("error_join", "Ce pseudo est déjà pris dans cette partie ! Choisis-en un autre.");
+      return; // On arrête tout, il ne rentre pas.
+    }
+
+    // Si tout est bon, on le laisse entrer
+    const newPlayer = {
+      id: socket.id,
+      username: username,
+      score: 0,
+      hand: [],
+      isHost: false // Seul le créateur est host
+    };
+
+    rooms[roomId].players.push(newPlayer);
+    socket.join(roomId);
+
+    // On prévient tout le monde (y compris le nouveau)
+    io.to(roomId).emit("update_players", rooms[roomId].players);
+    
+    // Si la partie a déjà commencé, on lui donne l'état du jeu
+    if (rooms[roomId].gameState !== 'LOBBY') {
+        socket.emit("game_started", {
+            blackCard: rooms[roomId].currentBlackCard,
+            judgeId: rooms[roomId].judgeId,
+            players: rooms[roomId].players
+        });
+        socket.emit("start_voting", rooms[roomId].playedCards);
     }
   });
 
