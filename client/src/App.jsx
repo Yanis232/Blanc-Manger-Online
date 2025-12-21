@@ -7,6 +7,15 @@ const socket = io(BACKEND_URL);
 
 const JOKER_TEXT = "🃏 JOKER (Écris ta connerie)";
 
+// --- 🔊 GESTION DU SON ---
+const playSound = (soundName) => {
+    // Crée un nouvel objet Audio pointant vers /sounds/
+    const audio = new Audio(`/sounds/${soundName}`);
+    audio.volume = 0.4; // Volume doux
+    audio.play().catch(e => console.log("Son bloqué par le navigateur (interaction requise)"));
+};
+// -------------------------
+
 function App() {
   const [username, setUsername] = useState("");
   const [roomCode, setRoomCode] = useState("");
@@ -63,11 +72,20 @@ function App() {
         setPlayers(data.players); 
         const me = data.players.find(p => p.id === socket.id); 
         if (me) { setMyHand(me.hand); setLocalIsHost(me.isHost); } 
+
+        // 🔊 SON : Début de manche / Distribution
+        playSound('draw.mp3');
     });
 
     socket.on("start_voting", (cardsOnTable) => { setGameState('JUDGING'); setTableCards(cardsOnTable); setTimer(null); });
-    socket.on("round_winner", setWinnerInfo);
-    socket.on("game_over", (data) => { setGrandWinner(data); setWinnerInfo(null); });
+    
+    socket.on("round_winner", (info) => {
+        setWinnerInfo(info);
+        // 🔊 SON : Victoire de manche
+        playSound('win.mp3'); 
+    });
+
+    socket.on("game_over", (data) => { setGrandWinner(data); setWinnerInfo(null); playSound('win.mp3'); });
     socket.on("settings_updated", (settings) => { setRoomSettings(settings); });
     socket.on("timer_update", (timeLeft) => { setTimer(timeLeft); });
     socket.on("timer_stop", () => { setTimer(null); });
@@ -119,7 +137,11 @@ function App() {
   const joinRoom = () => { if (username.trim() && roomCode.trim()) { socket.emit("join_room", { roomId: roomCode, username }); setIsInRoom(true); }};
   const startGame = () => { socket.emit("start_game", roomCode); };
   const kickPlayer = (playerId, playerName) => { if (confirm(`Exclure ${playerName} ?`)) socket.emit('kick_player', { roomId: roomCode, playerId }); };
-  const voteCard = (firstCardText) => { socket.emit('judge_vote', { roomId: roomCode, winningCardFirstText: firstCardText }); };
+  const voteCard = (firstCardText) => { 
+      // 🔊 SON : Quand le juge vote
+      playSound('pop.mp3');
+      socket.emit('judge_vote', { roomId: roomCode, winningCardFirstText: firstCardText }); 
+    };
   const resetGame = () => { if (confirm("⚠️ Reset Partie ?")) socket.emit('reset_game', roomCode); };
   const updateSettings = (key, value) => {
       const newSettings = { ...roomSettings, [key]: parseInt(value) };
@@ -130,6 +152,9 @@ function App() {
   // 🔥 LOGIQUE DE SÉLECTION INTELLIGENTE
   const handleCardClick = (cardText) => {
       const pickNeeded = blackCard.pick || 1;
+
+      // 🔊 SON : Quand on clique sur une carte
+      playSound('pop.mp3');
 
       // 1. Gestion Joker
       if (cardText === JOKER_TEXT) {
@@ -181,6 +206,9 @@ function App() {
       setMyHand(newHand);
       setHasPlayed(true);
       setSelectedCards([]);
+
+      // 🔊 SON : Confirmation finale
+      playSound('draw.mp3');
   };
 
   const submitJoker = () => {
