@@ -136,6 +136,11 @@ function App() {
     }
   };
 
+  // 🔥 LA FONCTION MANQUANTE EST ICI 🔥
+  const startGame = () => { 
+    socket.emit("start_game", roomCode); 
+  };
+
   const kickPlayer = (playerId, playerName) => {
     if (confirm(`Veux-tu vraiment exclure ${playerName} ?`)) {
       socket.emit('kick_player', { roomId: roomCode, playerId });
