@@ -273,7 +273,7 @@ function App() {
                     
                     {/* 👇 CORRECTION SCROLL ET TOUCH 👇 */}
                     <div className="w-full relative z-10">
-                        <div className="flex overflow-x-auto gap-4 px-4 pb-6 pt-32 items-end w-full touch-pan-x snap-x">
+                        <div className="flex overflow-x-auto gap-4 px-4 pb-6 pt-12 items-end w-full touch-pan-x snap-x">
                             {myHand.map((card, index) => (
                             <div key={index} onClick={() => playCard(card)}
                                 // Ajout de 'snap-center' pour le mobile et ajustement du hover
