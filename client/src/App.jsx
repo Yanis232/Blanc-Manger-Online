@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import io from 'socket.io-client';
+import confetti from 'canvas-confetti'; // <--- IMPORT CONFETTIS
 
 // En ligne (Vercel), on utilise la variable d'environnement. En local, on garde localhost.
 const BACKEND_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
@@ -31,7 +32,7 @@ function App() {
   const [newCardText, setNewCardText] = useState("");
   const [newCardType, setNewCardType] = useState("white");
 
-  // --- USE EFFECT (ECOUTEURS) ---
+  // --- USE EFFECT (ECOUTEURS SOCKET) ---
   useEffect(() => {
     socket.on("room_created", (roomId) => {
       setRoomCode(roomId);
@@ -94,8 +95,19 @@ function App() {
     };
   }, []);
 
+  // --- EFFET VISUEL : CONFETTIS ---
+  useEffect(() => {
+    if (winnerInfo) {
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#FFD700', '#FFA500', '#FF4500'] // Or, Orange, Rouge
+      });
+    }
+  }, [winnerInfo]);
+
   // --- CALCUL DE SÉCURITÉ : SUIS-JE L'HÔTE ? ---
-  // On regarde soit le state local, soit la liste des joueurs
   const amIHost = localIsHost || players.find(p => p.id === socket.id)?.isHost;
 
   // --- ACTIONS DU JEU ---
@@ -132,7 +144,7 @@ function App() {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-10 animate-bounce relative">
           
-          {/* BOUTON ADMIN EGALEMENT ICI (IMPORTANT) */}
+          {/* BOUTON ADMIN */}
           {amIHost && (
             <div className="absolute top-4 left-4 z-50">
                 <button onClick={resetGame} className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded shadow border border-red-400 opacity-80 hover:opacity-100 transition">
@@ -172,7 +184,7 @@ function App() {
         )}
 
         {/* Header Scores */}
-        <div className="w-full flex justify-between items-start mb-6 px-4 pt-8"> {/* Ajout de pt-8 pour laisser place au bouton */}
+        <div className="w-full flex justify-between items-start mb-6 px-4 pt-8">
           <h2 className="text-xl font-bold">Salle: {roomCode}</h2>
           <div className="flex flex-col items-end bg-gray-800 p-2 rounded">
               {players.map(p => (
@@ -198,8 +210,11 @@ function App() {
                     <div className="flex flex-wrap justify-center gap-4">
                         {tableCards.map((card, idx) => (
                             <div key={idx} onClick={() => amIJudge ? voteCard(card.text) : null}
-                                className={`bg-white text-black p-4 rounded-lg w-48 h-64 shadow-lg flex items-center justify-center text-center transition transform duration-200
-                                ${amIJudge ? 'cursor-pointer hover:scale-110 hover:bg-yellow-100 hover:z-10' : 'opacity-90'}`}>
+                                // AJOUT CLASSE ANIMATION + DELAY
+                                className={`animate-card-pop bg-white text-black p-4 rounded-lg w-48 h-64 shadow-lg flex items-center justify-center text-center transition transform duration-200
+                                ${amIJudge ? 'cursor-pointer hover:scale-110 hover:bg-yellow-100 hover:z-10' : 'opacity-90'}`}
+                                style={{ animationDelay: `${idx * 0.1}s` }}
+                            >
                                 <p className="font-bold">{card.text}</p>
                             </div>
                         ))}
@@ -221,7 +236,10 @@ function App() {
                     <div className="flex overflow-x-auto gap-4 p-4 pb-8 items-end h-72 scrollbar-hide">
                         {myHand.map((card, index) => (
                         <div key={index} onClick={() => playCard(card)}
-                            className="flex-shrink-0 bg-white text-gray-900 p-4 rounded-lg w-48 h-64 shadow-lg cursor-pointer transition transform hover:-translate-y-6 hover:rotate-1 border-2 border-transparent hover:border-purple-500">
+                            // AJOUT CLASSE ANIMATION + DELAY
+                            className="animate-card-pop flex-shrink-0 bg-white text-gray-900 p-4 rounded-lg w-48 h-64 shadow-lg cursor-pointer transition transform hover:-translate-y-6 hover:rotate-1 border-2 border-transparent hover:border-purple-500"
+                            style={{ animationDelay: `${index * 0.1}s` }}
+                        >
                             <p className="font-bold text-lg select-none">{card}</p>
                         </div>
                         ))}
