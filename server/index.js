@@ -152,6 +152,21 @@ io.on('connection', (socket) => {
     io.to(roomId).emit('return_to_lobby', room.players);
   });
 
+  // --- ADMIN : EXCLURE UN JOUEUR (KICK) ---
+  socket.on('kick_player', ({ roomId, playerId }) => {
+    const room = rooms[roomId];
+    if (!room) return;
+
+    // 1. On supprime le joueur de la liste
+    room.players = room.players.filter(p => p.id !== playerId);
+
+    // 2. On prévient la personne exclue (pour la renvoyer à l'accueil)
+    io.to(playerId).emit('you_are_kicked');
+
+    // 3. On met à jour la liste pour les survivants
+    io.to(roomId).emit('update_players', room.players);
+  });
+
   socket.on('judge_vote', ({ roomId, winningCardText }) => {
     const room = rooms[roomId];
     if (!room) return;

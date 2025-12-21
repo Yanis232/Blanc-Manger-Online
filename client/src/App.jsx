@@ -71,6 +71,13 @@ function App() {
 
     socket.on("round_winner", setWinnerInfo);
 
+    socket.on("you_are_kicked", () => {
+      alert("Tu as été exclu de la partie par l'hôte ! 😢");
+      window.location.reload(); // On recharge la page pour revenir à l'accueil proprement
+    });
+    
+    // Ajoute aussi  dans le return du useEffect !
+
     socket.on("return_to_lobby", (updatedPlayers) => {
       setGameState('LOBBY');
       setGameStarted(false);
@@ -92,6 +99,7 @@ function App() {
       socket.off("start_voting");
       socket.off("round_winner");
       socket.off("return_to_lobby");
+      socket.off("you_are_kicked")
     };
   }, []);
 
@@ -117,6 +125,11 @@ function App() {
   const createRoom = () => { if (username.trim()) socket.emit("create_room", username); };
   const joinRoom = () => { if (username.trim() && roomCode.trim()) { socket.emit("join_room", { roomId: roomCode, username }); setIsInRoom(true); }};
   const startGame = () => { socket.emit("start_game", roomCode); };
+  const kickPlayer = (playerId, playerName) => {
+    if (confirm(`Veux-tu vraiment exclure ${playerName} ?`)) {
+      socket.emit('kick_player', { roomId: roomCode, playerId });
+    }
+  };
   
   const playCard = (cardText) => {
     socket.emit('play_card', { roomId: roomCode, cardText });
@@ -191,7 +204,12 @@ function App() {
           <h2 className="text-xl font-bold">Salle: {roomCode}</h2>
           <div className="flex flex-col items-end bg-gray-800 p-2 rounded">
               {players.map(p => (
-                  <div key={p.id} className={`text-sm ${p.id === judgeId ? 'text-yellow-400 font-bold' : 'text-white'}`}>
+                  <div key={p.id} className={`flex items-center justify-end gap-2 text-sm ${p.id === judgeId ? 'text-yellow-400 font-bold' : 'text-white'}`}>
+                      {/* Bouton Kick discret */}
+                      {amIHost && p.id !== socket.id && (
+                          <button onClick={() => kickPlayer(p.id, p.username)} className="text-red-500 hover:text-red-400 font-bold px-1">❌</button>
+                      )}
+                      
                       {p.username} : {p.score} pts {p.id === judgeId && "👑"}
                   </div>
               ))}
@@ -236,7 +254,7 @@ function App() {
             ) : (
                 <>
                     <h3 className="text-gray-400 mb-2 ml-4 animate-bounce">À toi de jouer :</h3>
-                    <div className="flex overflow-x-visible gap-4 px-4 pb-8 pt-20 items-end w-full min-h-[350px] scrollbar-hide">
+                    <div className="flex overflow-x-auto gap-4 px-4 pb-4 pt-32 items-end w-full scrollbar-hide">
                         {myHand.map((card, index) => (
                         <div key={index} onClick={() => playCard(card)}
                             // AJOUT CLASSE ANIMATION + DELAY
@@ -272,7 +290,20 @@ function App() {
             {players.map((player) => (
               <li key={player.id} className="flex items-center justify-between bg-gray-700 p-3 rounded">
                 <span>{player.username}</span>
-                {player.isHost && <span className="text-xs bg-yellow-600 px-2 py-1 rounded font-bold text-black">Hôte</span>}
+                <div className="flex items-center gap-2">
+                    {player.isHost && <span className="text-xs bg-yellow-600 px-2 py-1 rounded font-bold text-black">Hôte</span>}
+                    
+                    {/* BOUTON KICK (Visible si JE suis l'hôte et que ce n'est pas MOI) */}
+                    {amIHost && player.id !== socket.id && (
+                        <button 
+                          onClick={() => kickPlayer(player.id, player.username)}
+                          className="bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1 rounded font-bold"
+                          title="Exclure le joueur"
+                        >
+                          ❌
+                        </button>
+                    )}
+                </div>
               </li>
             ))}
           </ul>
