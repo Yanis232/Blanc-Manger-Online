@@ -95,14 +95,17 @@ function App() {
     };
   }, []);
 
-  // --- EFFET VISUEL : CONFETTIS ---
+
+// --- EFFET VISUEL : CONFETTIS ---
   useEffect(() => {
     if (winnerInfo) {
       confetti({
         particleCount: 150,
         spread: 70,
         origin: { y: 0.6 },
-        colors: ['#FFD700', '#FFA500', '#FF4500'] // Or, Orange, Rouge
+        colors: ['#FFD700', '#FFA500', '#FF4500'],
+        zIndex: 9999, // <--- LA CLÉ POUR LE MOBILE (Force l'affichage au premier plan)
+        disableForReducedMotion: true // Bon pour l'accessibilité mobile
       });
     }
   }, [winnerInfo]);
@@ -233,7 +236,7 @@ function App() {
             ) : (
                 <>
                     <h3 className="text-gray-400 mb-2 ml-4 animate-bounce">À toi de jouer :</h3>
-                    <div className="flex overflow-x-auto gap-4 p-4 pb-8 items-end h-72 scrollbar-hide">
+                    <div className="flex overflow-x-auto gap-4 px-4 pb-4 pt-12 items-end h-80 w-full scrollbar-hide">
                         {myHand.map((card, index) => (
                         <div key={index} onClick={() => playCard(card)}
                             // AJOUT CLASSE ANIMATION + DELAY
