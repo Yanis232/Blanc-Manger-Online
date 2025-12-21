@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 
-// En ligne, on utilisera une variable. En local, on garde localhost.
+// En ligne (Vercel), on utilise la variable d'environnement. En local, on garde localhost.
 const BACKEND_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 const socket = io(BACKEND_URL);
 
@@ -17,7 +17,10 @@ function App() {
   const [myHand, setMyHand] = useState([]);
   const [blackCard, setBlackCard] = useState("");
   const [judgeId, setJudgeId] = useState("");
-  const [isHost, setIsHost] = useState(false);
+  
+  // On remplace le state isHost par un calcul direct plus bas pour être sûr
+  const [localIsHost, setLocalIsHost] = useState(false); 
+
   const [hasPlayed, setHasPlayed] = useState(false);
   const [gameState, setGameState] = useState('LOBBY'); 
   const [tableCards, setTableCards] = useState([]); 
@@ -28,14 +31,20 @@ function App() {
   const [newCardText, setNewCardText] = useState("");
   const [newCardType, setNewCardType] = useState("white");
 
+  // --- USE EFFECT (ECOUTEURS) ---
   useEffect(() => {
     socket.on("room_created", (roomId) => {
       setRoomCode(roomId);
       setIsInRoom(true);
-      setIsHost(true);
+      setLocalIsHost(true); // Je viens de créer la salle, je suis l'hôte
     });
 
-    socket.on("update_players", setPlayers);
+    socket.on("update_players", (currentPlayers) => {
+      setPlayers(currentPlayers);
+      // Mise à jour de sécurité du statut d'hôte
+      const me = currentPlayers.find(p => p.id === socket.id);
+      if (me) setLocalIsHost(me.isHost);
+    });
 
     socket.on("game_started", (data) => {
       setGameStarted(true);
@@ -46,8 +55,12 @@ function App() {
       setHasPlayed(false);
       setTableCards([]);
       
+      setPlayers(data.players); 
       const me = data.players.find(p => p.id === socket.id);
-      if (me) setMyHand(me.hand);
+      if (me) {
+        setMyHand(me.hand);
+        setLocalIsHost(me.isHost);
+      }
     });
 
     socket.on("start_voting", (cardsOnTable) => {
@@ -57,16 +70,35 @@ function App() {
 
     socket.on("round_winner", setWinnerInfo);
 
+    socket.on("return_to_lobby", (updatedPlayers) => {
+      setGameState('LOBBY');
+      setGameStarted(false);
+      setWinnerInfo(null);
+      setTableCards([]);
+      setMyHand([]);
+      setHasPlayed(false);
+      setPlayers(updatedPlayers);
+      // On re-vérifie qui est l'hôte au retour dans le lobby
+      const me = updatedPlayers.find(p => p.id === socket.id);
+      if (me) setLocalIsHost(me.isHost);
+    });
+
+    // NETTOYAGE DES ECOUTEURS (IMPORTANT)
     return () => {
       socket.off("room_created");
       socket.off("update_players");
       socket.off("game_started");
       socket.off("start_voting");
       socket.off("round_winner");
+      socket.off("return_to_lobby");
     };
   }, []);
 
-  // Actions Jeu
+  // --- CALCUL DE SÉCURITÉ : SUIS-JE L'HÔTE ? ---
+  // On regarde soit le state local, soit la liste des joueurs
+  const amIHost = localIsHost || players.find(p => p.id === socket.id)?.isHost;
+
+  // --- ACTIONS DU JEU ---
   const createRoom = () => { if (username.trim()) socket.emit("create_room", username); };
   const joinRoom = () => { if (username.trim() && roomCode.trim()) { socket.emit("join_room", { roomId: roomCode, username }); setIsInRoom(true); }};
   const startGame = () => { socket.emit("start_game", roomCode); };
@@ -81,7 +113,6 @@ function App() {
     socket.emit('judge_vote', { roomId: roomCode, winningCardText: cardText });
   };
 
-  // Actions Créateur
   const saveCard = () => {
     if (newCardText.trim()) {
       socket.emit('create_custom_card', { text: newCardText, type: newCardType });
@@ -90,10 +121,26 @@ function App() {
     }
   };
 
+  const resetGame = () => {
+    if (confirm("⚠️ ATTENTION : Cela va annuler la partie en cours et renvoyer tout le monde au salon. Continuer ?")) {
+      socket.emit('reset_game', roomCode);
+    }
+  };
+
   // --- VUE : VICTOIRE MANCHE ---
   if (winnerInfo) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-10 animate-bounce">
+      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-10 animate-bounce relative">
+          
+          {/* BOUTON ADMIN EGALEMENT ICI (IMPORTANT) */}
+          {amIHost && (
+            <div className="absolute top-4 left-4 z-50">
+                <button onClick={resetGame} className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded shadow border border-red-400 opacity-80 hover:opacity-100 transition">
+                    ⚠️ Reset Partie
+                </button>
+            </div>
+          )}
+
           <h1 className="text-6xl font-bold text-yellow-400 mb-4">🏆 {winnerInfo.winnerName} GAGNE !</h1>
           <p className="text-2xl">Avec la réponse :</p>
           <div className="bg-white text-black p-6 rounded-lg mt-4 text-xl font-bold rotate-2 shadow-2xl transform scale-110">
@@ -109,9 +156,23 @@ function App() {
     const amIJudge = socket.id === judgeId;
 
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-4">
+      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-4 relative">
+        
+        {/* BOUTON ADMIN (HOTE SEULEMENT) */}
+        {amIHost && (
+            <div className="absolute top-4 left-4 z-50">
+                <button 
+                    onClick={resetGame}
+                    className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded shadow border border-red-400 opacity-50 hover:opacity-100 transition"
+                    title="Remettre la partie à zéro"
+                >
+                    ⚠️ Reset Partie
+                </button>
+            </div>
+        )}
+
         {/* Header Scores */}
-        <div className="w-full flex justify-between items-start mb-6 px-4">
+        <div className="w-full flex justify-between items-start mb-6 px-4 pt-8"> {/* Ajout de pt-8 pour laisser place au bouton */}
           <h2 className="text-xl font-bold">Salle: {roomCode}</h2>
           <div className="flex flex-col items-end bg-gray-800 p-2 rounded">
               {players.map(p => (
@@ -194,7 +255,7 @@ function App() {
               </li>
             ))}
           </ul>
-          {isHost ? (
+          {amIHost ? (
             <button onClick={startGame} className="w-full py-4 bg-green-600 hover:bg-green-500 rounded font-bold text-xl shadow-[0_0_15px_rgba(34,197,94,0.5)] transition transform hover:scale-105">LANCER LA PARTIE 🚀</button>
           ) : (
             <div className="text-center p-4 bg-gray-700/50 rounded animate-pulse text-gray-300">L'hôte va lancer la partie...</div>

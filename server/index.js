@@ -129,6 +129,29 @@ io.on('connection', (socket) => {
     }
   });
 
+  // --- ADMIN : REMETTRE À ZÉRO (RESET) ---
+  socket.on('reset_game', (roomId) => {
+    const room = rooms[roomId];
+    if (!room) return;
+
+    // Sécurité : Seul l'hôte peut reset (optionnel, ici on fait confiance au bouton masqué)
+    
+    // 1. On remet tout à zéro
+    room.gameState = 'LOBBY';
+    room.currentBlackCard = null;
+    room.playedCards = [];
+    room.judgeId = null;
+
+    // 2. On vide les mains et les scores des joueurs
+    room.players.forEach(p => {
+      p.score = 0;
+      p.hand = [];
+    });
+
+    // 3. On prévient tout le monde de retourner au Lobby
+    io.to(roomId).emit('return_to_lobby', room.players);
+  });
+
   socket.on('judge_vote', ({ roomId, winningCardText }) => {
     const room = rooms[roomId];
     if (!room) return;
