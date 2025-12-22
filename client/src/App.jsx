@@ -123,7 +123,6 @@ function App() {
   const [showJokerModal, setShowJokerModal] = useState(false);
   const [jokerInput, setJokerInput] = useState("");
   
-  // 🔥 ICI LA VARIABLE MANQUANTE EST DE RETOUR :
   const [importPackCode, setImportPackCode] = useState("");
   
   const [showCreator, setShowCreator] = useState(false);
@@ -236,6 +235,10 @@ function App() {
   const voteCard = (firstCardText) => { playSound('pop.mp3'); socket.emit('judge_vote', { roomId: roomCode, winningCardFirstText: firstCardText }); };
   const resetGame = () => { if (confirm("⚠️ Reset Partie ?")) socket.emit('reset_game', roomCode); };
   
+  // 🔥 AJOUT GESTION DES BOTS
+  const addBot = () => { socket.emit('add_bot', roomCode); };
+  const removeBot = () => { socket.emit('remove_bot', roomCode); };
+
   const updateSettings = (key, value) => { const newSettings = { ...roomSettings, [key]: value }; setRoomSettings(newSettings); socket.emit('update_settings', { roomId: roomCode, settings: newSettings }); };
   const togglePack = (packId) => { if (!amIHost) return; let currentPacks = roomSettings.packs || []; if (currentPacks.includes(packId)) { if (currentPacks.length > 1) currentPacks = currentPacks.filter(p => p !== packId); } else { currentPacks = [...currentPacks, packId]; } updateSettings('packs', currentPacks); };
   const triggerNextRound = () => { socket.emit('trigger_next_round', roomCode); };
@@ -341,9 +344,18 @@ function App() {
                       <label>Temps par tour (s) :</label>
                       <input type="number" value={roomSettings.timerDuration} onChange={(e) => updateSettings('timerDuration', parseInt(e.target.value))} className="w-16 bg-gray-900 border border-gray-500 rounded px-2 py-1 text-center font-bold" min="0" max="120" placeholder="0" />
                   </div>
+
+                  {/* 🔥 GESTION DES BOTS */}
+                  <div className="flex justify-between items-center mb-3 pt-2 border-t border-gray-600">
+                      <label>Robots 🤖 :</label>
+                      <div className="flex gap-2">
+                          <button onClick={removeBot} className="bg-red-600 hover:bg-red-500 w-8 h-8 rounded font-bold text-white">-</button>
+                          <button onClick={addBot} className="bg-green-600 hover:bg-green-500 w-8 h-8 rounded font-bold text-white">+</button>
+                      </div>
+                  </div>
                   
                   {/* SÉLECTEUR DE PACKS */}
-                  <div className="mt-4 pt-3 border-t border-gray-600">
+                  <div className="mt-2 border-t border-gray-600 pt-2">
                       <h4 className="text-sm font-bold text-gray-300 mb-2">Modes de Jeu :</h4>
                       <div className="grid grid-cols-2 gap-2 mb-4">
                           {OFFICIAL_PACKS.map(pack => (
@@ -354,16 +366,11 @@ function App() {
                               </label>
                           ))}
                       </div>
-
-                      {/* 🔥 ZONE D'IMPORTATION (VISIBLE SEULEMENT SI 'CUSTOM' EST COCHÉ) */}
+                      
+                      {/* IMPORTATION */}
                       <AnimatePresence>
                           {roomSettings.packs?.includes('custom') && (
-                              <motion.div 
-                                  initial={{ height: 0, opacity: 0 }} 
-                                  animate={{ height: 'auto', opacity: 1 }} 
-                                  exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden"
-                              >
+                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                                   <div className="bg-black/20 p-3 rounded border border-purple-500/30">
                                       <h4 className="text-xs font-bold text-purple-300 mb-2">Importer un paquet via Code :</h4>
                                       <div className="flex gap-2">
@@ -380,7 +387,7 @@ function App() {
                   </div>
               </div>
               ) : (
-                  // VUE JOUEUR (Pas Hôte)
+                  // VUE JOUEUR
                   <div className="mb-6 text-center text-sm text-gray-400 bg-gray-700 p-4 rounded">
                       <p>🎯 Objectif : {roomSettings.scoreLimit} points</p>
                       <p>⏱️ Temps : {roomSettings.timerDuration > 0 ? roomSettings.timerDuration + 's' : 'Infini'}</p>
@@ -400,7 +407,11 @@ function App() {
               <ul className="space-y-3 mb-8">
                   {players.map((player) => (
                       <li key={player.id} className="flex items-center justify-between bg-gray-700 p-3 rounded">
-                          <div className="flex items-center gap-3"><img src={`https://api.dicebear.com/7.x/fun-emoji/svg?seed=${player.username}`} alt="avatar" className="w-10 h-10 rounded-full bg-gray-300"/><span className="font-bold">{player.username}</span></div>
+                          <div className="flex items-center gap-3">
+                              <img src={`https://api.dicebear.com/7.x/fun-emoji/svg?seed=${player.username}`} alt="avatar" className="w-10 h-10 rounded-full bg-gray-300"/>
+                              <span className="font-bold">{player.username}</span>
+                              {player.isBot && <span className="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded ml-2">BOT</span>}
+                          </div>
                           <div className="flex items-center gap-2">{player.isHost && <span className="text-xs bg-yellow-600 px-2 py-1 rounded font-bold text-black">Hôte</span>}{amIHost && player.id !== socket.id && (<button onClick={() => kickPlayer(player.id, player.username)} className="bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1 rounded font-bold">❌</button>)}</div>
                       </li>
                   ))}
