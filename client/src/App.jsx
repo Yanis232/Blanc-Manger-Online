@@ -9,7 +9,6 @@ const socket = io(BACKEND_URL);
 const JOKER_TEXT = "🃏 JOKER (Écris ta connerie)";
 
 const OFFICIAL_PACKS = [
-    { id: 'main', name: '🍷 Classique' },
     { id: 'trash', name: '🔞 Trash' },
     { id: 'soft', name: '🟢 Famille / Soft' },
     { id: 'custom', name: '✨ Personnalisé / Import' }
@@ -20,7 +19,6 @@ const AVAILABLE_TAGS = [
     { id: 'soft', emoji: '🟢', label: 'Soft' }
 ];
 
-// --- 🔊 SONS & VOIX ---
 const playSound = (soundName) => {
     const audio = new Audio(`/sounds/${soundName}`);
     audio.volume = 0.4;
@@ -38,28 +36,14 @@ const speak = (text) => {
     window.speechSynthesis.speak(utterance);
 };
 
-// --- UTILS ---
-const buildFullSentence = (blackText, whiteTexts) => {
-    let sentence = blackText;
-    whiteTexts.forEach(answer => {
-        let cleanAnswer = answer.replace(/\.$/, ""); 
-        sentence = sentence.replace(/_{3,}/, ` ${cleanAnswer} `);
-    });
-    const firstClean = whiteTexts[0]?.replace(/\.$/, "");
-    if (whiteTexts.length > 0 && firstClean && !sentence.includes(firstClean)) {
-        sentence += " " + whiteTexts.join(" et ");
-    }
-    return sentence;
-};
-
 // --- COMPOSANTS UI ---
 const ChatOverlay = ({ isOpen, setIsOpen, unreadCount, messages, username, chatInput, setChatInput, onSend, chatRef }) => {
     return (
         <>
-            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => setIsOpen(!isOpen)} className="fixed bottom-4 right-4 bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-full shadow-2xl z-[100]">💬 {unreadCount > 0 && (<span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center border-2 border-gray-900 animate-pulse">{unreadCount}</span>)}</motion.button>
+            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => setIsOpen(!isOpen)} className="fixed bottom-24 right-4 md:bottom-4 md:right-4 bg-blue-600 hover:bg-blue-500 text-white p-3 md:p-4 rounded-full shadow-2xl z-[100]">💬 {unreadCount > 0 && (<span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center border-2 border-gray-900 animate-pulse">{unreadCount}</span>)}</motion.button>
             <AnimatePresence>
             {isOpen && (
-                <motion.div initial={{ opacity: 0, y: 50, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 50, scale: 0.9 }} className="fixed bottom-20 right-4 w-80 h-96 bg-gray-800 border border-gray-600 rounded-xl shadow-2xl flex flex-col z-[100] overflow-hidden">
+                <motion.div initial={{ opacity: 0, y: 50, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 50, scale: 0.9 }} className="fixed bottom-36 right-4 left-4 md:left-auto md:bottom-20 md:right-4 md:w-80 h-64 md:h-96 bg-gray-800 border border-gray-600 rounded-xl shadow-2xl flex flex-col z-[100] overflow-hidden">
                     <div className="bg-gray-700 p-3 font-bold border-b border-gray-600 flex justify-between items-center"><span>Tchat</span><button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white">✕</button></div>
                     <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-gray-900/50">
                         {messages.length === 0 && <p className="text-gray-500 text-center text-sm italic mt-4">La salle est calme...</p>}
@@ -82,12 +66,12 @@ const CardBrowserModal = ({ isOpen, onClose, onImport, searchResults, onSearch }
     const handleImport = () => { onImport(selectedCards, activeTab); setSelectedCards([]); onClose(); };
     if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 bg-black/90 z-[200] flex items-center justify-center p-4 backdrop-blur-md">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-gray-800 w-full max-w-4xl h-[80vh] rounded-xl shadow-2xl border border-gray-600 flex flex-col overflow-hidden">
-                <div className="p-4 bg-gray-900 border-b border-gray-700 flex justify-between items-center"><h2 className="text-xl font-bold text-white flex items-center gap-2">🔍 Explorateur</h2><button onClick={onClose} className="text-gray-400 hover:text-white text-xl font-bold">✕</button></div>
-                <div className="p-4 bg-gray-800 border-b border-gray-700 flex flex-col md:flex-row gap-4"><div className="flex bg-gray-900 rounded p-1"><button onClick={() => { setActiveTab('black'); setSelectedCards([]); }} className={`px-4 py-2 rounded text-sm font-bold transition ${activeTab === 'black' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>Questions</button><button onClick={() => { setActiveTab('white'); setSelectedCards([]); }} className={`px-4 py-2 rounded text-sm font-bold transition ${activeTab === 'white' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>Réponses</button></div><input className="flex-1 bg-gray-900 border border-gray-600 rounded px-4 py-2 text-white focus:outline-none focus:border-blue-500" placeholder="Filtrer..." value={query} onChange={handleTyping} /></div>
-                <div className="flex-1 overflow-y-auto p-4 bg-gray-900/50"><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">{searchResults.map((card) => { const isSelected = selectedCards.some(c => c._id === card._id); return (<div key={card._id} onClick={() => toggleCard(card)} className={`p-4 rounded cursor-pointer border-2 transition relative ${isSelected ? 'bg-blue-900/40 border-blue-500' : 'bg-gray-800 border-gray-700 hover:border-gray-500'}`}>{isSelected && <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs">✓</div>}<p className={`text-sm font-medium ${card.type === 'black' ? 'text-white' : 'text-gray-300'}`}>{card.text}</p></div>); })}</div></div>
-                <div className="p-4 bg-gray-900 border-t border-gray-700 flex justify-between items-center"><span className="text-gray-400">{selectedCards.length} sel.</span><button onClick={handleImport} disabled={selectedCards.length === 0} className="bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 text-white px-6 py-3 rounded font-bold transition shadow-lg">IMPORTER</button></div>
+        <div className="fixed inset-0 bg-black/90 z-[200] flex items-center justify-center p-2 md:p-4 backdrop-blur-md">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-gray-800 w-full max-w-4xl h-[90vh] md:h-[80vh] rounded-xl shadow-2xl border border-gray-600 flex flex-col overflow-hidden">
+                <div className="p-3 md:p-4 bg-gray-900 border-b border-gray-700 flex justify-between items-center"><h2 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">🔍 Explorateur</h2><button onClick={onClose} className="text-gray-400 hover:text-white text-xl font-bold">✕</button></div>
+                <div className="p-3 md:p-4 bg-gray-800 border-b border-gray-700 flex flex-col md:flex-row gap-4"><div className="flex bg-gray-900 rounded p-1"><button onClick={() => { setActiveTab('black'); setSelectedCards([]); }} className={`flex-1 md:flex-none px-4 py-2 rounded text-sm font-bold transition ${activeTab === 'black' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>Questions</button><button onClick={() => { setActiveTab('white'); setSelectedCards([]); }} className={`flex-1 md:flex-none px-4 py-2 rounded text-sm font-bold transition ${activeTab === 'white' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>Réponses</button></div><input className="flex-1 bg-gray-900 border border-gray-600 rounded px-4 py-2 text-white focus:outline-none focus:border-blue-500" placeholder="Filtrer..." value={query} onChange={handleTyping} /></div>
+                <div className="flex-1 overflow-y-auto p-2 md:p-4 bg-gray-900/50"><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3">{searchResults.map((card) => { const isSelected = selectedCards.some(c => c._id === card._id); return (<div key={card._id} onClick={() => toggleCard(card)} className={`p-3 md:p-4 rounded cursor-pointer border-2 transition relative ${isSelected ? 'bg-blue-900/40 border-blue-500' : 'bg-gray-800 border-gray-700 hover:border-gray-500'}`}>{isSelected && <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs">✓</div>}<p className={`text-sm font-medium ${card.type === 'black' ? 'text-white' : 'text-gray-300'}`}>{card.text}</p></div>); })}</div></div>
+                <div className="p-3 md:p-4 bg-gray-900 border-t border-gray-700 flex justify-between items-center"><span className="text-gray-400 text-sm">{selectedCards.length} sel.</span><button onClick={handleImport} disabled={selectedCards.length === 0} className="bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 text-white px-4 py-2 md:px-6 md:py-3 rounded font-bold transition shadow-lg text-sm md:text-base">IMPORTER</button></div>
             </motion.div>
         </div>
     );
@@ -98,7 +82,6 @@ function App() {
   const [roomCode, setRoomCode] = useState("");
   const [isInRoom, setIsInRoom] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
-  
   const [players, setPlayers] = useState([]);
   const [myHand, setMyHand] = useState([]);
   const [blackCard, setBlackCard] = useState({ text: "", pick: 1 });
@@ -109,9 +92,11 @@ function App() {
   const [tableCards, setTableCards] = useState([]); 
   const [winnerInfo, setWinnerInfo] = useState(null); 
   const [grandWinner, setGrandWinner] = useState(null); 
-
   const [roomSettings, setRoomSettings] = useState({ scoreLimit: 10, timerDuration: 45, packs: ['soft'] });
   const [timer, setTimer] = useState(null);
+  
+  // 🔥 ETAT PAUSE
+  const [isPaused, setIsPaused] = useState(false);
 
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
@@ -122,24 +107,19 @@ function App() {
   const [selectedCards, setSelectedCards] = useState([]); 
   const [showJokerModal, setShowJokerModal] = useState(false);
   const [jokerInput, setJokerInput] = useState("");
-  
   const [importPackCode, setImportPackCode] = useState("");
-  
   const [showCreator, setShowCreator] = useState(false);
   const [showBrowser, setShowBrowser] = useState(false);
   const [newPackName, setNewPackName] = useState("");
   const [createdPackCode, setCreatedPackCode] = useState(null);
-  
   const [editPackId, setEditPackId] = useState("");
   const [loadingPack, setLoadingPack] = useState(false);
-  
   const [blackCardsList, setBlackCardsList] = useState([]);
   const [whiteCardsList, setWhiteCardsList] = useState([]);
   const [inputBlack, setInputBlack] = useState("");
   const [inputWhite, setInputWhite] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-
   const [showAdmin, setShowAdmin] = useState(false); 
   const [adminCards, setAdminCards] = useState([]); 
   const [adminPacks, setAdminPacks] = useState([]); 
@@ -147,12 +127,20 @@ function App() {
   const [adminNewType, setAdminNewType] = useState("white"); 
 
   useEffect(() => {
+    // 🔥 RECONNEXION INTELLIGENTE (Fix pour le clic bloqué)
+    socket.on('connect', () => {
+        console.log("Connecté ! Vérification de la session...");
+        if (roomCode && username) {
+            console.log("Tentative de reconnexion au serveur...");
+            socket.emit("join_room", { roomId: roomCode, username });
+        }
+    });
+
     socket.on("room_created", (roomId) => { setRoomCode(roomId); setIsInRoom(true); setLocalIsHost(true); });
     socket.on("error_join", (message) => { alert(message); setIsInRoom(false); });
     socket.on("update_players", (currentPlayers) => { setPlayers(currentPlayers); const me = currentPlayers.find(p => p.id === socket.id); if (me) setLocalIsHost(me.isHost); });
 
     socket.on("game_started", (data) => { 
-        console.log("🔥 GAME STARTED !", data);
         setGameStarted(true); setGameState('PLAYING'); setWinnerInfo(null); setGrandWinner(null);
         let bCard = data.blackCard;
         if (!bCard || typeof bCard === 'string') bCard = { text: bCard || "Chargement...", pick: 1 };
@@ -171,13 +159,15 @@ function App() {
     socket.on("you_are_kicked", () => { alert("Tu as été exclu !"); window.location.reload(); });
     socket.on("return_to_lobby", (updatedPlayers) => { setGameState('LOBBY'); setGameStarted(false); setWinnerInfo(null); setGrandWinner(null); setTableCards([]); setMyHand([]); setHasPlayed(false); setPlayers(updatedPlayers); setTimer(null); setSelectedCards([]); });
     socket.on("receive_chat_message", (msg) => { setChatMessages(prev => [...prev, msg]); });
+    
+    // Listeners Pause
+    socket.on("game_paused_state", (state) => { setIsPaused(state); });
 
     socket.on("custom_pack_saved", ({ packId, packName, count, isUpdate }) => { setCreatedPackCode(packId); const msg = isUpdate ? `✅ Paquet "${packName}" mis à jour !` : `✅ Paquet "${packName}" créé !`; alert(`${msg}\nCode : ${packId} (${count} cartes)`); });
     socket.on("pack_data_for_edit", ({ packId, packName, blackCards, whiteCards }) => { setEditPackId(packId); setNewPackName(packName || ""); setBlackCardsList(blackCards); setWhiteCardsList(whiteCards); setLoadingPack(false); alert(`Paquet "${packName}" chargé !`); });
     socket.on("search_results", (results) => { setSearchResults(results); });
     socket.on("error_msg", (msg) => { alert(msg); setLoadingPack(false); });
     socket.on("notification", (msg) => { console.log(msg); });
-
     socket.on("admin_receive_cards", (cards) => setAdminCards(cards));
     socket.on("admin_receive_packs", (packs) => setAdminPacks(packs));
     socket.on("admin_action_success", (msg) => { alert(msg); setAdminNewText(""); });
@@ -190,10 +180,10 @@ function App() {
       socket.off("force_played"); socket.off("receive_chat_message");
       socket.off("custom_pack_saved"); socket.off("pack_data_for_edit"); socket.off("search_results"); socket.off("error_msg"); socket.off("notification");
       socket.off("admin_receive_cards"); socket.off("admin_receive_packs"); socket.off("admin_action_success");
+      socket.off("game_paused_state");
     };
-  }, []); 
+  }, [roomCode, username]); // Dépendances importantes pour la reconnexion
 
-  // --- EFFETS SECONDAIRES ---
   useEffect(() => {
     if (winnerInfo || grandWinner) {
       const colors = grandWinner ? ['#ffffff', '#ff0000', '#00ff00', '#0000ff'] : ['#FFD700', '#FFA500', '#FF4500'];
@@ -221,7 +211,6 @@ function App() {
   useEffect(() => { if (isChatOpen) { setUnreadCount(0); setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "auto" }), 50); } }, [isChatOpen, chatMessages]);
   useEffect(() => { if (!isChatOpen && chatMessages.length > 0) setUnreadCount(prev => prev + 1); }, [chatMessages]);
 
-  // --- ACTIONS ---
   const toggleAdmin = () => { if (showAdmin) setShowAdmin(false); else if (prompt("Mot de passe Admin ?") === "admin") { setShowAdmin(true); socket.emit('admin_fetch_cards'); socket.emit('admin_fetch_packs'); } else alert("Accès refusé."); };
   const adminAddCard = () => { if (adminNewText.trim()) socket.emit('admin_add_card', { text: adminNewText, type: adminNewType }); };
   const adminDeleteCard = (id) => { if (confirm("Supprimer ?")) socket.emit('admin_delete_card', id); };
@@ -234,11 +223,11 @@ function App() {
   const kickPlayer = (playerId, playerName) => { if (confirm(`Exclure ${playerName} ?`)) socket.emit('kick_player', { roomId: roomCode, playerId }); };
   const voteCard = (firstCardText) => { playSound('pop.mp3'); socket.emit('judge_vote', { roomId: roomCode, winningCardFirstText: firstCardText }); };
   const resetGame = () => { if (confirm("⚠️ Reset Partie ?")) socket.emit('reset_game', roomCode); };
-  
-  // 🔥 AJOUT GESTION DES BOTS
   const addBot = () => { socket.emit('add_bot', roomCode); };
   const removeBot = () => { socket.emit('remove_bot', roomCode); };
-
+  // 🔥 ACTION PAUSE
+  const togglePause = () => { socket.emit('toggle_pause', roomCode); };
+  
   const updateSettings = (key, value) => { const newSettings = { ...roomSettings, [key]: value }; setRoomSettings(newSettings); socket.emit('update_settings', { roomId: roomCode, settings: newSettings }); };
   const togglePack = (packId) => { if (!amIHost) return; let currentPacks = roomSettings.packs || []; if (currentPacks.includes(packId)) { if (currentPacks.length > 1) currentPacks = currentPacks.filter(p => p !== packId); } else { currentPacks = [...currentPacks, packId]; } updateSettings('packs', currentPacks); };
   const triggerNextRound = () => { socket.emit('trigger_next_round', roomCode); };
@@ -261,7 +250,6 @@ function App() {
   const handleBrowserImport = (cards, type) => { const newCards = cards.map(c => ({ text: c.text, tags: c.tags || [] })); if(type === 'black') { const filtered = newCards.filter(nc => !blackCardsList.some(ex => ex.text === nc.text)); setBlackCardsList(prev => [...prev, ...filtered]); } else { const filtered = newCards.filter(nc => !whiteCardsList.some(ex => ex.text === nc.text)); setWhiteCardsList(prev => [...prev, ...filtered]); } };
   const importCustomPack = () => { if(importPackCode.trim()) { socket.emit('load_custom_pack', { roomId: roomCode, packId: importPackCode.trim() }); setImportPackCode(""); } };
 
-  // --- ECRAN CREATEUR DE PAQUET ---
   if(showCreator) {
       return (
           <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 font-sans">
@@ -274,7 +262,7 @@ function App() {
                       <button onClick={() => setShowBrowser(true)} className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded font-bold shadow-lg flex items-center justify-center gap-2 transition transform hover:scale-105">🔍 Ouvrir l'Explorateur de Cartes</button>
                   </div>
                   {createdPackCode ? (
-                      <div className="text-center p-10 bg-green-900/30 border border-green-500 rounded animate-card-pop"><h2 className="text-3xl font-bold text-green-400 mb-2">Paquet sauvegardé ! 🎉</h2><p className="mb-4 text-gray-300">Partage ce code :</p><div className="bg-black p-6 rounded-lg text-4xl font-mono select-all cursor-pointer border-2 border-green-500 inline-block text-white shadow-[0_0_20px_rgba(34,197,94,0.4)]">{createdPackCode}</div><br/><button onClick={() => { setCreatedPackCode(null); }} className="mt-8 text-sm underline text-gray-400 hover:text-white">Continuer à modifier</button></div>
+                      <div className="text-center p-10 bg-green-900/30 border border-green-500 rounded animate-card-pop"><h2 className="text-3xl font-bold text-green-400 mb-2">Paquet sauvegardé ! 🎉</h2><p className="mb-4 text-gray-300">Partage ce code avec tes amis pour jouer :</p><div className="bg-black p-6 rounded-lg text-4xl font-mono select-all cursor-pointer border-2 border-green-500 inline-block text-white shadow-[0_0_20px_rgba(34,197,94,0.4)]">{createdPackCode}</div><br/><button onClick={() => { setCreatedPackCode(null); }} className="mt-8 text-sm underline text-gray-400 hover:text-white">Continuer à modifier ce paquet</button></div>
                   ) : (
                       <>
                           <div className="mb-6"><label className="block text-sm font-bold mb-2 text-gray-300">Nom du paquet</label><input className="w-full bg-gray-900 border border-gray-600 p-3 rounded text-white text-lg focus:border-purple-500 focus:outline-none" value={newPackName} onChange={(e) => setNewPackName(e.target.value)} placeholder="Ex: Mes blagues nulles" /></div>
@@ -314,7 +302,6 @@ function App() {
       );
   }
 
-  // --- ECRAN ADMIN ---
   if (showAdmin) { 
       const questions = adminCards.filter(c => c.type === 'black'); const answers = adminCards.filter(c => c.type === 'white'); 
       return (<div className="min-h-screen bg-gray-900 text-white p-6 font-sans"><div className="flex justify-between items-center mb-6 border-b border-gray-700 pb-4"><h1 className="text-3xl font-bold text-red-500">🛠️ Admin</h1><button onClick={() => setShowAdmin(false)} className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded">Quitter</button></div><div className="bg-gray-800 p-6 rounded-lg mb-8 shadow-lg border border-gray-700"><h2 className="text-xl font-bold mb-4 text-blue-400">📦 Packs Personnalisés</h2><div className="grid grid-cols-1 md:grid-cols-3 gap-4">{adminPacks.length === 0 && <p className="text-gray-500">Aucun pack custom trouvé.</p>}{adminPacks.map(pack => (<div key={pack.id} className="bg-gray-700 p-4 rounded flex justify-between items-center"><div><p className="font-bold text-yellow-400">{pack.name || "Sans nom"}</p><p className="text-xs text-gray-400 font-mono">{pack.id} • {pack.count} cartes</p></div><button onClick={() => adminDeletePack(pack.id)} className="bg-red-600 hover:bg-red-500 text-white px-3 py-1 rounded text-xs font-bold">SUPPRIMER</button></div>))}</div></div><div className="bg-gray-800 p-6 rounded-lg mb-8 shadow-lg border border-gray-700"><h2 className="text-xl font-bold mb-4">Ajouter une carte (Pack Main)</h2><div className="flex gap-4 mb-4"><button onClick={() => setAdminNewType('black')} className={`flex-1 py-2 rounded font-bold transition ${adminNewType === 'black' ? 'bg-black text-white border-2 border-white' : 'bg-gray-700 text-gray-400'}`}>Question (Noire)</button><button onClick={() => setAdminNewType('white')} className={`flex-1 py-2 rounded font-bold transition ${adminNewType === 'white' ? 'bg-white text-black border-2 border-transparent' : 'bg-gray-700 text-gray-400'}`}>Réponse (Blanche)</button></div><textarea value={adminNewText} onChange={(e) => setAdminNewText(e.target.value)} placeholder={adminNewType === 'black' ? "Ex: ____ et ____." : "Ex: Une loutre"} className="w-full bg-gray-900 text-white p-3 rounded border border-gray-600 mb-4 focus:border-red-500 outline-none" rows="2" /><button onClick={adminAddCard} className="w-full bg-green-600 hover:bg-green-500 py-3 rounded font-bold text-lg">AJOUTER</button></div><div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="bg-black border border-gray-700 rounded-lg p-4 h-[600px] flex flex-col"><h3 className="text-xl font-bold mb-4 text-center border-b border-gray-800 pb-2 text-white">Questions (Dernières)</h3><div className="overflow-y-auto flex-1 space-y-2 pr-2">{questions.map(card => (<div key={card._id} className="bg-gray-900 p-3 rounded border border-gray-700 flex justify-between items-center group hover:border-gray-500"><span className="text-sm">{card.text} {card.pick > 1 && <span className="text-yellow-400 font-bold ml-2">(x{card.pick})</span>}</span><button onClick={() => adminDeleteCard(card._id)} className="text-red-500 opacity-0 group-hover:opacity-100 transition px-2">🗑️</button></div>))}</div></div><div className="bg-white text-black border border-gray-400 rounded-lg p-4 h-[600px] flex flex-col"><h3 className="text-xl font-bold mb-4 text-center border-b border-gray-300 pb-2 text-gray-900">Réponses (Dernières)</h3><div className="overflow-y-auto flex-1 space-y-2 pr-2">{answers.map(card => (<div key={card._id} className="bg-gray-100 p-3 rounded shadow-sm flex justify-between items-center group border border-gray-200 hover:border-gray-400"><span className="text-sm font-medium">{card.text}</span><button onClick={() => adminDeleteCard(card._id)} className="text-red-500 opacity-0 group-hover:opacity-100 transition px-2 font-bold">✕</button></div>))}</div></div></div></div>); 
@@ -322,7 +309,160 @@ function App() {
 
   if (grandWinner) { return (<div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-10 overflow-hidden relative"><ChatOverlay {...chatProps} /><motion.h1 initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", bounce: 0.5 }} className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-700 mb-8 text-center">CHAMPION !</motion.h1><motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ repeat: Infinity, duration: 2 }} className="bg-gray-800 border-4 border-yellow-500 rounded-full w-64 h-64 flex items-center justify-center shadow-[0_0_50px_rgba(255,215,0,0.6)] mb-8"><span className="text-5xl font-bold">{grandWinner.winnerName}</span></motion.div><p className="text-2xl text-gray-300">Score : {grandWinner.score}</p>{amIHost && (<button onClick={resetGame} className="mt-12 bg-white text-black font-bold py-4 px-8 rounded-full hover:scale-110 transition shadow-lg">👑 Rejouer</button>)}</div>); }
   if (winnerInfo) { return (<div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-10 relative"><ChatOverlay {...chatProps} />{amIHost && (<div className="absolute top-4 left-4 z-50"><button onClick={resetGame} className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded shadow border border-red-400 opacity-80 hover:opacity-100 transition">⚠️ Reset</button></div>)}<motion.h1 initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-4xl md:text-6xl font-bold text-yellow-400 mb-8 drop-shadow-lg text-center">🏆 {winnerInfo.winnerName} GAGNE !</motion.h1><motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1, rotate: 1 }} transition={{ type: "spring", stiffness: 200 }} className="bg-white text-black p-8 rounded-2xl shadow-2xl max-w-3xl border-4 border-black mb-12"><p className="text-2xl md:text-3xl font-black text-center leading-relaxed">{blackCard.text.split(/_{3,}/).map((part, index, array) => (<span key={index}>{part}{index < array.length - 1 && winnerInfo.winningCards[index] && (<span className="text-purple-700 underline decoration-4 decoration-yellow-400 mx-2">{winnerInfo.winningCards[index].replace(/\.$/, "")}</span>)}</span>))}</p></motion.div>{amIHost ? (<motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }} onClick={triggerNextRound} className="bg-green-500 hover:bg-green-600 text-white font-black py-4 px-8 rounded-full shadow-[0_0_20px_rgba(34,197,94,0.6)] text-2xl border-4 border-white">MANCHE SUIVANTE ➡️</motion.button>) : (<div className="text-gray-400 animate-pulse text-lg text-center">L'hôte va lancer la prochaine manche...</div>)}</div>); }
-  if (gameStarted) { const amIJudge = socket.id === judgeId; const pickAmount = blackCard.pick || 1; let instructionText = "À toi de jouer :"; let instructionClass = "text-gray-400"; if (!amIJudge && pickAmount > 1) { if (selectedCards.length === 0) { instructionText = "1️⃣ Choisis ta PREMIÈRE carte"; instructionClass = "text-yellow-400 font-bold animate-pulse"; } else if (selectedCards.length < pickAmount) { instructionText = "2️⃣ Choisis ta DEUXIÈME carte"; instructionClass = "text-blue-400 font-bold animate-pulse"; } else { instructionText = "✅ Tout est bon ? Valide !"; instructionClass = "text-green-400 font-bold"; } } return (<div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-4 relative"><ChatOverlay {...chatProps} />{showJokerModal && (<div className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white text-black p-6 rounded-xl w-full max-w-sm shadow-2xl animate-card-pop"><h3 className="text-2xl font-bold mb-4 text-center">🃏 JOKER</h3><textarea autoFocus className="w-full bg-gray-100 p-4 rounded border-2 border-purple-500 text-lg font-bold mb-4 focus:outline-none" rows="3" placeholder="..." value={jokerInput} onChange={(e) => setJokerInput(e.target.value)} /><div className="flex gap-2"><button onClick={() => setShowJokerModal(false)} className="flex-1 bg-gray-300 hover:bg-gray-400 py-3 rounded font-bold">Annuler</button><button onClick={submitJoker} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded font-bold shadow-lg">VALIDER</button></div></div></div>)}{amIHost && (<div className="absolute top-4 left-4 z-50"><button onClick={resetGame} className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded shadow border border-red-400 opacity-50 hover:opacity-100 transition">⚠️ Reset</button></div>)}<div className="w-full flex justify-between items-start mb-2 px-4 pt-4"><h2 className="text-xl font-bold">Salle: {roomCode}</h2>{timer !== null && gameState === 'PLAYING' && (<div className={`text-4xl font-black font-mono px-4 py-2 rounded shadow-lg animate-pulse ${timer <= 10 ? 'bg-red-600 text-white' : 'bg-gray-800 text-yellow-400'}`}>{timer}s</div>)}<div className="flex flex-col items-end bg-gray-800 p-3 rounded-lg shadow-md border border-gray-700">{players.map(p => (<motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} key={p.id} className={`flex items-center justify-end gap-3 text-sm mb-2 last:mb-0 ${p.id === judgeId ? 'text-yellow-400 font-bold' : 'text-white'}`}>{amIHost && p.id !== socket.id && (<button onClick={() => kickPlayer(p.id, p.username)} className="text-red-500 hover:text-red-400 font-bold px-1">❌</button>)}<div className="text-right leading-tight"><div className="font-semibold">{p.username} {p.id === judgeId && "👑"}</div><div className="text-xs opacity-70">{p.score}/{roomSettings.scoreLimit} pts</div></div><img src={`https://api.dicebear.com/7.x/fun-emoji/svg?seed=${p.username}`} alt="Avatar" className="w-10 h-10 rounded-full bg-gray-200 border-2 border-white/20 shadow-sm" /></motion.div>))}</div></div><div className="flex flex-col items-center justify-center flex-grow w-full max-w-6xl mb-4"><motion.div key={blackCard.text} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring" }} className="bg-black border-2 border-white text-white p-6 rounded-xl w-64 h-80 flex items-center justify-center text-center shadow-2xl mb-8 relative"><p className="text-xl font-bold">{blackCard.text}</p>{pickAmount > 1 && <div className="absolute bottom-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded-full">PICK {pickAmount}</div>}</motion.div>{gameState === 'JUDGING' && (<div className="w-full"><h3 className="text-center text-2xl mb-6 text-yellow-400 font-bold animate-pulse">{amIJudge ? "👑 CHOISIS LE MEILLEUR COMBO !" : "Le juge réfléchit..."}</h3><div className="flex flex-wrap justify-center gap-4"><AnimatePresence>{tableCards.map((cardEntry, idx) => (<motion.div key={idx} initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: idx * 0.1 }} whileHover={amIJudge ? { scale: 1.05, y: -10 } : {}} onClick={() => amIJudge ? voteCard(cardEntry.texts[0]) : null} className={`flex gap-1 p-2 rounded-xl transition cursor-pointer ${amIJudge ? 'hover:bg-yellow-100/20' : ''}`}>{cardEntry.texts.map((txt, i) => (<div key={i} className="bg-white text-black p-4 rounded-lg w-40 h-56 shadow-lg flex items-center justify-center text-center text-sm font-bold border border-gray-300"><p>{txt}</p></div>))}</motion.div>))}</AnimatePresence></div></div>)}</div>{!amIJudge && gameState === 'PLAYING' && (<div className="w-full max-w-full overflow-hidden mt-auto">{hasPlayed ? ( <div className="text-center py-8 bg-gray-800 rounded-t-xl opacity-75 animate-pulse"><p className="text-xl text-gray-300">Cartes posées ! ⏳</p></div> ) : (<><div className="flex flex-col items-center px-4 mb-2"><h3 className={`text-lg mb-2 ${instructionClass}`}>{instructionText}</h3>{pickAmount > 1 && selectedCards.length === pickAmount && (<motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} onClick={() => confirmPlay()} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-8 rounded-full shadow-lg mb-2">ENVOYER LES RÉPONSES 🚀</motion.button>)}</div><div className="w-full relative z-10"><motion.div layout className="flex overflow-x-auto gap-4 px-4 pb-6 pt-16 items-end w-full touch-pan-x snap-x"><AnimatePresence>{myHand.map((card, index) => { const selectionIndex = selectedCards.findIndex(c => c.original === card || (card === JOKER_TEXT && c.original === JOKER_TEXT)); const isSelected = selectionIndex > -1; return (<motion.div key={`${card}-${index}`} layout initial={{ y: 100, opacity: 0 }} animate={{ y: isSelected ? -40 : 0, opacity: 1 }} exit={{ y: -200, opacity: 0, scale: 0.5 }} whileHover={{ y: -20, scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleCardClick(card)} className={`snap-center flex-shrink-0 p-4 rounded-lg w-48 h-64 shadow-lg cursor-pointer border-4 relative transition-colors duration-200 ${card === JOKER_TEXT ? 'bg-purple-600 text-white' : 'bg-white text-gray-900'} ${isSelected ? 'border-blue-500' : 'border-transparent hover:border-purple-300'} `}>{isSelected && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -top-4 -right-4 bg-blue-500 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-lg border-2 border-white z-20 text-xl">{selectionIndex + 1}</motion.div>}<p className="font-bold text-lg select-none">{card}</p></motion.div>) })}</AnimatePresence><div className="w-4 flex-shrink-0"></div></motion.div></div></>)}</div>)}{amIJudge && gameState === 'PLAYING' && (<div className="mt-auto mb-10 bg-gray-800 px-8 py-4 rounded-full animate-pulse border border-gray-600">Attends que tes sujets fassent leur choix... 🤴</div>)}</div>); }
+  if (gameStarted) { const amIJudge = socket.id === judgeId; const pickAmount = blackCard.pick || 1; let instructionText = "À toi de jouer :"; let instructionClass = "text-gray-400"; if (!amIJudge && pickAmount > 1) { if (selectedCards.length === 0) { instructionText = "1️⃣ Choisis ta PREMIÈRE carte"; instructionClass = "text-yellow-400 font-bold animate-pulse"; } else if (selectedCards.length < pickAmount) { instructionText = "2️⃣ Choisis ta DEUXIÈME carte"; instructionClass = "text-blue-400 font-bold animate-pulse"; } else { instructionText = "✅ Tout est bon ? Valide !"; instructionClass = "text-green-400 font-bold"; } } return (<div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-4 relative"><ChatOverlay {...chatProps} />{showJokerModal && (<div className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white text-black p-6 rounded-xl w-full max-w-sm shadow-2xl animate-card-pop"><h3 className="text-2xl font-bold mb-4 text-center">🃏 JOKER</h3><textarea autoFocus className="w-full bg-gray-100 p-4 rounded border-2 border-purple-500 text-lg font-bold mb-4 focus:outline-none" rows="3" placeholder="..." value={jokerInput} onChange={(e) => setJokerInput(e.target.value)} /><div className="flex gap-2"><button onClick={() => setShowJokerModal(false)} className="flex-1 bg-gray-300 hover:bg-gray-400 py-3 rounded font-bold">Annuler</button><button onClick={submitJoker} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded font-bold shadow-lg">VALIDER</button></div></div></div>)} {amIHost && (
+    <div className="absolute top-2 left-2 md:top-4 md:left-4 z-50">
+        <div className="flex flex-col gap-1.5 md:gap-2">
+            <button 
+                onClick={resetGame} 
+                className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-[10px] md:text-xs px-2 md:px-3 py-1 rounded shadow border border-red-400 opacity-50 hover:opacity-100 transition touch-manipulation"
+            >
+                ⚠️ Reset
+            </button>
+            <button 
+                onClick={togglePause} 
+                className={`${isPaused ? 'bg-green-600 hover:bg-green-500' : 'bg-yellow-600 hover:bg-yellow-500'} text-white text-[10px] md:text-xs px-2 md:px-3 py-1 rounded shadow border opacity-80 hover:opacity-100 transition touch-manipulation`}
+            >
+                {isPaused ? '▶️ Reprendre' : '⏸️ Pause'}
+            </button>
+        </div>
+    </div>
+)}{isPaused && (
+    <div className="absolute inset-0 z-[200] bg-black/70 flex flex-col items-center justify-center backdrop-blur-sm gap-6">
+        <h2 className="text-6xl font-black text-yellow-400 animate-pulse tracking-widest border-4 border-yellow-400 p-8 rounded-xl rotate-[-5deg]">PAUSE</h2>
+        {amIHost && (
+            <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={togglePause}
+                className="bg-green-600 hover:bg-green-500 text-white font-bold px-8 py-4 rounded-full shadow-2xl border-4 border-white text-xl z-[210]"
+            >
+                ▶️ REPRENDRE
+            </motion.button>
+        )}
+        {!amIHost && (
+            <p className="text-gray-300 text-lg animate-pulse">L'hôte va reprendre la partie...</p>
+        )}
+    </div>
+)}
+<div className="w-full flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-2 px-2 md:px-4 pt-4">
+    {/* Code salle + Timer */}
+    <div className="flex items-center gap-3 w-full md:w-auto justify-between">
+        <h2 className="text-lg md:text-xl font-bold">Salle: {roomCode}</h2>
+        {timer !== null && gameState === 'PLAYING' && (
+            <div className={`text-2xl md:text-4xl font-black font-mono px-3 md:px-4 py-1 md:py-2 rounded shadow-lg animate-pulse ${timer <= 10 ? 'bg-red-600 text-white' : 'bg-gray-800 text-yellow-400'}`}>
+                {timer}s
+            </div>
+        )}
+    </div>
+    
+    {/* Liste des joueurs */}
+    <div className="flex flex-col items-end bg-gray-800 p-2 md:p-3 rounded-lg shadow-md border border-gray-700 w-full md:w-auto">
+        {players.map(p => (
+            <motion.div 
+                initial={{ x: 20, opacity: 0 }} 
+                animate={{ x: 0, opacity: 1 }} 
+                key={p.id} 
+                className={`flex items-center justify-end gap-2 md:gap-3 text-xs md:text-sm mb-1.5 md:mb-2 last:mb-0 ${p.id === judgeId ? 'text-yellow-400 font-bold' : 'text-white'}`}
+            >
+                {amIHost && p.id !== socket.id && (
+                    <button 
+                        onClick={() => kickPlayer(p.id, p.username)} 
+                        className="text-red-500 hover:text-red-400 font-bold px-1 touch-manipulation"
+                    >
+                        ❌
+                    </button>
+                )}
+                <div className="text-right leading-tight">
+                    <div className="font-semibold">
+                        {p.username} {p.id === judgeId && "👑"} {p.isBot && "🤖"}
+                    </div>
+                    <div className="text-[10px] md:text-xs opacity-70">
+                        {p.score}/{roomSettings.scoreLimit} pts
+                    </div>
+                </div>
+                <img 
+                    src={`https://api.dicebear.com/7.x/fun-emoji/svg?seed=${p.username}`} 
+                    alt="Avatar" 
+                    className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-200 border-2 border-white/20 shadow-sm" 
+                />
+            </motion.div>
+        ))}
+    </div>
+</div><div className="flex flex-col items-center justify-center flex-grow w-full max-w-6xl mb-4"><motion.div 
+    key={blackCard.text} 
+    initial={{ scale: 0.8, opacity: 0 }} 
+    animate={{ scale: 1, opacity: 1 }} 
+    transition={{ type: "spring" }} 
+    className="bg-black border-2 border-white text-white p-4 md:p-6 rounded-xl w-56 h-72 md:w-64 md:h-80 flex items-center justify-center text-center shadow-2xl mb-6 md:mb-8 relative"
+>
+    <p className="text-lg md:text-xl font-bold">{blackCard.text}</p>
+    {pickAmount > 1 && (
+        <div className="absolute bottom-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded-full">
+            PICK {pickAmount}
+        </div>
+    )}
+</motion.div>{gameState === 'JUDGING' && (
+    <div className="w-full px-2 md:px-0">
+        <h3 className="text-center text-xl md:text-2xl mb-4 md:mb-6 text-yellow-400 font-bold animate-pulse">
+            {amIJudge ? "👑 CHOISIS LE MEILLEUR COMBO !" : "Le juge réfléchit..."}
+        </h3>
+        <div className="flex flex-wrap justify-center gap-2 md:gap-4">
+            <AnimatePresence>
+                {tableCards.map((cardEntry, idx) => (
+                    <motion.div 
+                        key={idx} 
+                        initial={{ y: 50, opacity: 0 }} 
+                        animate={{ y: 0, opacity: 1 }} 
+                        transition={{ delay: idx * 0.1 }} 
+                        whileHover={amIJudge ? { scale: 1.05, y: -10 } : {}} 
+                        whileTap={amIJudge ? { scale: 0.95 } : {}}
+                        onClick={() => amIJudge ? voteCard(cardEntry.texts[0]) : null} 
+                        className={`flex gap-1 p-1.5 md:p-2 rounded-xl transition ${amIJudge ? 'cursor-pointer hover:bg-yellow-100/20 active:bg-yellow-100/30 touch-manipulation' : ''}`}
+                    >
+                        {cardEntry.texts.map((txt, i) => (
+                            <div 
+                                key={i} 
+                                className="bg-white text-black p-3 md:p-4 rounded-lg w-32 h-48 md:w-40 md:h-56 shadow-lg flex items-center justify-center text-center text-xs md:text-sm font-bold border border-gray-300"
+                            >
+                                <p>{txt}</p>
+                            </div>
+                        ))}
+                    </motion.div>
+                ))}
+            </AnimatePresence>
+        </div>
+    </div>
+)}</div>{!amIJudge && gameState === 'PLAYING' && (<div className="w-full max-w-full overflow-hidden mt-auto">{hasPlayed ? ( <div className="text-center py-8 bg-gray-800 rounded-t-xl opacity-75 animate-pulse"><p className="text-xl text-gray-300">Cartes posées ! ⏳</p></div> ) : (<><div className="flex flex-col items-center px-4 mb-2"><h3 className={`text-lg mb-2 ${instructionClass}`}>{instructionText}</h3>{pickAmount > 1 && selectedCards.length === pickAmount && (<motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} onClick={() => confirmPlay()} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-8 rounded-full shadow-lg mb-2">ENVOYER LES RÉPONSES 🚀</motion.button>)}</div><div className="w-full relative z-10">
+    {/* Flèches de navigation mobile */}
+    {myHand.length > 3 && (
+        <>
+            <button
+                onClick={() => {
+                    const container = document.getElementById('cards-container');
+                    container.scrollBy({ left: -200, behavior: 'smooth' });
+                }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-purple-600/90 hover:bg-purple-500 text-white w-12 h-12 rounded-full shadow-2xl flex items-center justify-center border-2 border-white/30 backdrop-blur-sm md:hidden"
+            >
+                ◀
+            </button>
+            <button
+                onClick={() => {
+                    const container = document.getElementById('cards-container');
+                    container.scrollBy({ left: 200, behavior: 'smooth' });
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-purple-600/90 hover:bg-purple-500 text-white w-12 h-12 rounded-full shadow-2xl flex items-center justify-center border-2 border-white/30 backdrop-blur-sm md:hidden"
+            >
+                ▶
+            </button>
+        </>
+    )}
+    
+    <motion.div 
+        id="cards-container"
+        layout 
+        className="flex overflow-x-auto gap-4 px-4 pb-6 pt-16 items-end w-full touch-pan-x snap-x scroll-smooth"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+    ><AnimatePresence>{myHand.map((card, index) => { const selectionIndex = selectedCards.findIndex(c => c.original === card || (card === JOKER_TEXT && c.original === JOKER_TEXT)); const isSelected = selectionIndex > -1; return (<motion.div key={`${card}-${index}`} layout initial={{ y: 100, opacity: 0 }} animate={{ y: isSelected ? -40 : 0, opacity: 1 }} exit={{ y: -200, opacity: 0, scale: 0.5 }} whileHover={{ y: -20, scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleCardClick(card)} className={`snap-center flex-shrink-0 p-4 rounded-lg w-40 h-56 md:w-48 md:h-64 shadow-lg cursor-pointer border-4 relative transition-colors duration-200 ${card === JOKER_TEXT ? 'bg-purple-600 text-white' : 'bg-white text-gray-900'} ${isSelected ? 'border-blue-500' : 'border-transparent hover:border-purple-300'} `}>{isSelected && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -top-4 -right-4 bg-blue-500 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-lg border-2 border-white z-20 text-xl">{selectionIndex + 1}</motion.div>}<p className="font-bold text-lg select-none">{card}</p></motion.div>) })}</AnimatePresence><div className="w-4 flex-shrink-0"></div></motion.div></div></>)}</div>)}{amIJudge && gameState === 'PLAYING' && (<div className="mt-auto mb-10 bg-gray-800 px-8 py-4 rounded-full animate-pulse border border-gray-600">Attends que tes sujets fassent leur choix... 🤴</div>)}</div>); }
 
   // LOBBY AVEC IMPORTATEUR ET MODES
   if (isInRoom) { 
@@ -349,15 +489,15 @@ function App() {
                   <div className="flex justify-between items-center mb-3 pt-2 border-t border-gray-600">
                       <label>Robots 🤖 :</label>
                       <div className="flex gap-2">
-                          <button onClick={removeBot} className="bg-red-600 hover:bg-red-500 w-8 h-8 rounded font-bold text-white">-</button>
-                          <button onClick={addBot} className="bg-green-600 hover:bg-green-500 w-8 h-8 rounded font-bold text-white">+</button>
+                          <button onClick={removeBot} className="bg-red-600 hover:bg-red-500 w-8 h-8 rounded-full font-bold text-white flex items-center justify-center border-2 border-red-800 shadow">-</button>
+                          <button onClick={addBot} className="bg-green-600 hover:bg-green-500 w-8 h-8 rounded-full font-bold text-white flex items-center justify-center border-2 border-green-800 shadow">+</button>
                       </div>
                   </div>
                   
                   {/* SÉLECTEUR DE PACKS */}
                   <div className="mt-2 border-t border-gray-600 pt-2">
                       <h4 className="text-sm font-bold text-gray-300 mb-2">Modes de Jeu :</h4>
-                      <div className="grid grid-cols-2 gap-2 mb-4">
+                      <div className="flex flex-col gap-2 mb-4">
                           {OFFICIAL_PACKS.map(pack => (
                               <label key={pack.id} className={`flex items-center p-2 rounded cursor-pointer transition ${roomSettings.packs?.includes(pack.id) ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-600'}`}>
                                   <input type="checkbox" className="hidden" checked={roomSettings.packs?.includes(pack.id) || false} onChange={() => togglePack(pack.id)} />

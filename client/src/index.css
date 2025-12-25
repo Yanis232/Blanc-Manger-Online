@@ -27,3 +27,19 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #6b7280; /* Couleur au survol */
 }
+
+/* Masquer scrollbar pour les cartes */
+#cards-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* Améliorer le touch sur mobile */
+.touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth scroll natif */
+.scroll-smooth {
+    scroll-behavior: smooth;
+}
