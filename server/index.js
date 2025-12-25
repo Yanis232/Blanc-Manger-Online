@@ -25,7 +25,7 @@ const OFFICIAL_PACKS = [
     { id: 'soft', name: '🟢 Famille / Soft', default: true }
 ];
 
-const BOT_NAMES = ["R2D2", "Terminator", "Wall-E", "ChatG Pété", "Hal 9000", "Bender", "Optimus Prime", "Marvin", "Glados", "Cortana"];
+const BOT_NAMES = ["R2D2", "Terminator", "Wall-E", "ChatG Pété", "Optimus Prime", "Marvin", "Glados", "Cortana"];
 
 const PackSchema = new mongoose.Schema({ _id: String, name: String, updatedAt: { type: Date, default: Date.now } });
 const Pack = mongoose.model('Pack', PackSchema);
@@ -98,7 +98,7 @@ function startNewRound(roomId) {
     if (!room.judgeId && room.players.length > 0) room.judgeId = room.players[0].id;
 
     room.players.forEach(player => {
-        const cardsNeeded = 10 - player.hand.length;
+        const cardsNeeded = 12 - player.hand.length;
         if (cardsNeeded > 0) {
             const drawnCards = room.whiteDeck.splice(0, cardsNeeded);
             player.hand.push(...drawnCards);
